@@ -230,6 +230,10 @@ NODE_ENV=development npm run dev
 
 MIT License - see LICENSE file for details.
 
+## Information
+
+Information about the project can be found here: [https://diylabel.netlify.app/](https://diylabel.netlify.app/)
+
 ---
 
 **Built with ❤️ for sustainable local commerce**
