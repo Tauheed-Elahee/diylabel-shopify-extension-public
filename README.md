@@ -4,6 +4,8 @@ A Shopify extension that connects stores to local print shops for sustainable me
 
 All code is in the `diy-label` folder.
 
+This embedded app template uses App Bridge interface examples like an additional page in the app nav, as well as an Admin GraphQL mutation demo, to provide a starting point for app development.
+
 ## 🚀 Features
 
 - **Admin Dashboard**: Manage DIY Label settings for products
