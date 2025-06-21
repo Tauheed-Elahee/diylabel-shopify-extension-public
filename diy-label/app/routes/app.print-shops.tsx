@@ -19,45 +19,85 @@ import { supabaseAdmin } from "../lib/supabase.server";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
 
-  // Get all active print shops
-  const { data: printShops } = await supabaseAdmin
-    .from('print_shops')
-    .select('*')
-    .eq('active', true)
-    .order('name');
+  try {
+    // Get all print shops (using your existing schema)
+    const { data: printShops, error } = await supabaseAdmin
+      .from('print_shops')
+      .select('*')
+      .order('name');
 
-  return json({
-    printShops: printShops || []
-  });
+    if (error) {
+      throw error;
+    }
+
+    return json({
+      printShops: printShops || []
+    });
+  } catch (error) {
+    console.error('Error loading print shops:', error);
+    throw new Error(`Failed to load print shops: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 };
 
 export default function PrintShops() {
   const { printShops } = useLoaderData<typeof loader>();
 
-  const formatCapabilities = (capabilities: any) => {
-    const caps = [];
-    if (capabilities.screen_printing) caps.push('Screen Printing');
-    if (capabilities.embroidery) caps.push('Embroidery');
-    if (capabilities.dtg) caps.push('DTG');
-    if (capabilities.reused_apparel) caps.push('Reused Apparel');
-    if (capabilities.organic_inks) caps.push('Organic Inks');
-    if (capabilities.water_based_inks) caps.push('Water-based Inks');
-    
-    return caps.join(', ') || 'None listed';
-  };
-
-  const formatHours = (hours: any) => {
-    if (!hours || typeof hours !== 'object') return 'Hours not available';
-    
-    const today = new Date().toLocaleLowerCase().slice(0, 3);
-    const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    const todayHours = hours[today] || hours[`${today}day`];
-    
-    if (todayHours) {
-      return `Today: ${todayHours}`;
+  const formatCapabilities = (shop: any) => {
+    // Handle both new capabilities format and old specialty format
+    if (shop.capabilities && typeof shop.capabilities === 'object') {
+      const caps = [];
+      if (shop.capabilities.screen_printing) caps.push('Screen Printing');
+      if (shop.capabilities.embroidery) caps.push('Embroidery');
+      if (shop.capabilities.dtg) caps.push('DTG');
+      if (shop.capabilities.reused_apparel) caps.push('Reused Apparel');
+      if (shop.capabilities.organic_inks) caps.push('Organic Inks');
+      if (shop.capabilities.water_based_inks) caps.push('Water-based Inks');
+      
+      return caps.length > 0 ? caps.join(', ') : (shop.specialty || 'General Printing');
     }
     
-    return 'Hours available';
+    // Fallback to specialty if capabilities not available
+    return shop.specialty || 'General Printing';
+  };
+
+  const formatHours = (shop: any) => {
+    // Handle new hours format
+    if (shop.hours && typeof shop.hours === 'object') {
+      const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+      const todayHours = shop.hours[today];
+      
+      if (todayHours) {
+        return `Today: ${todayHours}`;
+      }
+      
+      return 'Hours available';
+    }
+    
+    // Fallback for shops without hours data
+    return 'Contact for hours';
+  };
+
+  const formatRating = (rating: number) => {
+    if (!rating) return 'No rating';
+    return `⭐ ${rating.toFixed(1)}/5.0`;
+  };
+
+  const formatContact = (shop: any) => {
+    const contact = [];
+    
+    if (shop.phone) {
+      contact.push(`📞 ${shop.phone}`);
+    }
+    
+    if (shop.email) {
+      contact.push(`✉️ ${shop.email}`);
+    }
+    
+    if (shop.website) {
+      contact.push(`🌐 Website`);
+    }
+    
+    return contact.length > 0 ? contact : ['Contact info not available'];
   };
 
   const printShopRows = printShops.map(shop => [
@@ -68,32 +108,37 @@ export default function PrintShops() {
       <Text as="span" variant="bodySm" color="subdued">
         {shop.address}
       </Text>
+      {shop.rating && (
+        <Text as="span" variant="bodySm">
+          {formatRating(shop.rating)}
+        </Text>
+      )}
     </BlockStack>,
+    
     <BlockStack gap="100" key={`contact-${shop.id}`}>
-      {shop.phone && (
-        <Text as="span" variant="bodySm">
-          📞 {shop.phone}
+      {formatContact(shop).map((contact, index) => (
+        <Text as="span" variant="bodySm" key={index}>
+          {contact.includes('Website') && shop.website ? (
+            <a href={shop.website} target="_blank" rel="noopener noreferrer">
+              {contact}
+            </a>
+          ) : (
+            contact
+          )}
         </Text>
-      )}
-      {shop.email && (
-        <Text as="span" variant="bodySm">
-          ✉️ {shop.email}
-        </Text>
-      )}
-      {shop.website && (
-        <Text as="span" variant="bodySm">
-          🌐 <a href={shop.website} target="_blank" rel="noopener noreferrer">Website</a>
-        </Text>
-      )}
+      ))}
     </BlockStack>,
+    
     <Text as="span" variant="bodySm" key={`caps-${shop.id}`}>
-      {formatCapabilities(shop.capabilities)}
+      {formatCapabilities(shop)}
     </Text>,
+    
     <Text as="span" variant="bodySm" key={`hours-${shop.id}`}>
-      {formatHours(shop.hours)}
+      {formatHours(shop)}
     </Text>,
-    <Badge status="success" key={`status-${shop.id}`}>
-      Active
+    
+    <Badge status={shop.active !== false ? "success" : "critical"} key={`status-${shop.id}`}>
+      {shop.active !== false ? 'Active' : 'Inactive'}
     </Badge>
   ]);
 
@@ -109,7 +154,7 @@ export default function PrintShops() {
                   Print Shop Network
                 </Text>
                 <Text as="p" variant="bodyMd" color="subdued">
-                  {printShops.length} active partners
+                  {printShops.length} print shops available
                 </Text>
               </InlineStack>
 
