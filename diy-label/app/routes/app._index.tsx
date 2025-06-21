@@ -22,103 +22,121 @@ import { supabaseAdmin } from "../lib/supabase.server";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
 
-  // Get store from database or create if doesn't exist
-  let store = await supabaseAdmin
-    .from('shopify_stores')
-    .select('*')
-    .eq('shop_domain', session.shop)
-    .single();
-
-  if (store.error && store.error.code === 'PGRST116') {
-    // Store doesn't exist, create it
-    const { data: newStore, error } = await supabaseAdmin
+  try {
+    // Get store from database or create if doesn't exist
+    const { data: existingStore, error: storeError } = await supabaseAdmin
       .from('shopify_stores')
-      .insert({
-        shop_domain: session.shop,
-        access_token: session.accessToken,
-        scope: session.scope,
-        settings: {}
-      })
-      .select()
+      .select('*')
+      .eq('shop_domain', session.shop)
       .single();
 
-    if (error) {
-      throw new Error(`Failed to create store: ${error.message}`);
-    }
-    store.data = newStore;
-  }
+    let store = existingStore;
 
-  // Get products with DIY Label settings
-  const productsResponse = await admin.graphql(`
-    query getProducts($first: Int!) {
-      products(first: $first) {
-        edges {
-          node {
-            id
-            title
-            handle
-            status
-            totalInventory
-            createdAt
-            images(first: 1) {
-              edges {
-                node {
-                  url
-                  altText
+    // If store doesn't exist, create it
+    if (storeError && storeError.code === 'PGRST116') {
+      const { data: newStore, error: createError } = await supabaseAdmin
+        .from('shopify_stores')
+        .insert({
+          shop_domain: session.shop,
+          access_token: session.accessToken,
+          scope: session.scope,
+          settings: {}
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error('Failed to create store:', createError);
+        throw new Error(`Failed to create store: ${createError.message}`);
+      }
+      
+      store = newStore;
+    } else if (storeError) {
+      console.error('Database error:', storeError);
+      throw new Error(`Database error: ${storeError.message}`);
+    }
+
+    // Ensure we have a valid store
+    if (!store) {
+      throw new Error('Failed to get or create store');
+    }
+
+    // Get products with DIY Label settings
+    const productsResponse = await admin.graphql(`
+      query getProducts($first: Int!) {
+        products(first: $first) {
+          edges {
+            node {
+              id
+              title
+              handle
+              status
+              totalInventory
+              createdAt
+              images(first: 1) {
+                edges {
+                  node {
+                    url
+                    altText
+                  }
                 }
               }
             }
           }
         }
       }
-    }
-  `, {
-    variables: { first: 50 }
-  });
+    `, {
+      variables: { first: 50 }
+    });
 
-  const productsData = await productsResponse.json();
-  const products = productsData.data?.products?.edges || [];
+    const productsData = await productsResponse.json();
+    const products = productsData.data?.products?.edges || [];
 
-  // Get product settings from database
-  const productIds = products.map((p: any) => p.node.id.replace('gid://shopify/Product/', ''));
-  const { data: productSettings } = await supabaseAdmin
-    .from('product_settings')
-    .select('*')
-    .eq('shopify_store_id', store.data.id)
-    .in('shopify_product_id', productIds);
+    // Get product settings from database
+    const productIds = products.map((p: any) => p.node.id.replace('gid://shopify/Product/', ''));
+    const { data: productSettings } = await supabaseAdmin
+      .from('product_settings')
+      .select('*')
+      .eq('shopify_store_id', store.id)
+      .in('shopify_product_id', productIds);
 
-  // Get recent DIY Label orders
-  const { data: recentOrders } = await supabaseAdmin
-    .from('diy_label_orders')
-    .select(`
-      *,
-      print_shops (
-        name,
-        address
-      )
-    `)
-    .eq('shopify_store_id', store.data.id)
-    .order('created_at', { ascending: false })
-    .limit(10);
+    // Get recent DIY Label orders
+    const { data: recentOrders } = await supabaseAdmin
+      .from('diy_label_orders')
+      .select(`
+        *,
+        print_shops (
+          name,
+          address
+        )
+      `)
+      .eq('shopify_store_id', store.id)
+      .order('created_at', { ascending: false })
+      .limit(10);
 
-  // Get print shops count
-  const { count: printShopsCount } = await supabaseAdmin
-    .from('print_shops')
-    .select('*', { count: 'exact', head: true })
-    .eq('active', true);
+    // Get print shops count
+    const { count: printShopsCount } = await supabaseAdmin
+      .from('print_shops')
+      .select('*', { count: 'exact', head: true })
+      .eq('active', true);
 
-  return json({
-    store: store.data,
-    products,
-    productSettings: productSettings || [],
-    recentOrders: recentOrders || [],
-    stats: {
-      totalProducts: products.length,
-      enabledProducts: productSettings?.filter(p => p.diy_label_enabled).length || 0,
-      totalOrders: recentOrders?.length || 0,
-      printShops: printShopsCount || 0
-    }
-  });
+    return json({
+      store,
+      products,
+      productSettings: productSettings || [],
+      recentOrders: recentOrders || [],
+      stats: {
+        totalProducts: products.length,
+        enabledProducts: productSettings?.filter(p => p.diy_label_enabled).length || 0,
+        totalOrders: recentOrders?.length || 0,
+        printShops: printShopsCount || 0
+      }
+    });
+
+  } catch (error) {
+    console.error('Loader error:', error);
+    throw new Error(`Failed to load dashboard data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -130,35 +148,42 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const productId = formData.get('productId') as string;
     const enabled = formData.get('enabled') === 'true';
 
-    // Get store
-    const { data: store } = await supabaseAdmin
-      .from('shopify_stores')
-      .select('id')
-      .eq('shop_domain', session.shop)
-      .single();
+    try {
+      // Get store
+      const { data: store, error: storeError } = await supabaseAdmin
+        .from('shopify_stores')
+        .select('id')
+        .eq('shop_domain', session.shop)
+        .single();
 
-    if (!store) {
-      throw new Error('Store not found');
+      if (storeError || !store) {
+        throw new Error('Store not found');
+      }
+
+      // Upsert product settings
+      const { error } = await supabaseAdmin
+        .from('product_settings')
+        .upsert({
+          shopify_store_id: store.id,
+          shopify_product_id: productId,
+          diy_label_enabled: enabled,
+          allow_reused_apparel: false,
+          settings: {}
+        }, {
+          onConflict: 'shopify_store_id,shopify_product_id'
+        });
+
+      if (error) {
+        throw new Error(`Failed to update product settings: ${error.message}`);
+      }
+
+      return json({ success: true });
+    } catch (error) {
+      console.error('Action error:', error);
+      return json({ 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      }, { status: 500 });
     }
-
-    // Upsert product settings
-    const { error } = await supabaseAdmin
-      .from('product_settings')
-      .upsert({
-        shopify_store_id: store.id,
-        shopify_product_id: productId,
-        diy_label_enabled: enabled,
-        allow_reused_apparel: false,
-        settings: {}
-      }, {
-        onConflict: 'shopify_store_id,shopify_product_id'
-      });
-
-    if (error) {
-      throw new Error(`Failed to update product settings: ${error.message}`);
-    }
-
-    return json({ success: true });
   }
 
   return json({ error: 'Invalid action' }, { status: 400 });
@@ -174,6 +199,8 @@ export default function Index() {
   useEffect(() => {
     if (fetcher.data?.success) {
       shopify.toast.show("Product settings updated");
+    } else if (fetcher.data?.error) {
+      shopify.toast.show(fetcher.data.error, { isError: true });
     }
   }, [fetcher.data, shopify]);
 
