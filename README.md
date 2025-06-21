@@ -2,6 +2,8 @@
 
 A Shopify extension that connects stores to local print shops for sustainable merch fulfillment.
 
+All code is in the `diy-label` folder.
+
 ## 🚀 Features
 
 - **Admin Dashboard**: Manage DIY Label settings for products
@@ -15,7 +17,7 @@ A Shopify extension that connects stores to local print shops for sustainable me
 ### 1. Clone and Install
 ```bash
 git clone <repository-url>
-cd diy-label-shopify-extension
+cd diy-label-shopify-extension/diy-label/
 npm install
 ```
 
@@ -27,6 +29,9 @@ cp .env.example .env
 
 ### 3. Start Development
 ```bash
+# Use Shopify app
+shopify app dev
+
 # Start both frontend and backend
 npm run dev
 
