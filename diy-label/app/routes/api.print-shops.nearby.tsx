@@ -13,8 +13,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   }
 
   try {
-    // Use PostGIS to find nearby print shops
-    // This is a simplified distance calculation - in production you'd use proper PostGIS functions
+    // Get all active print shops and calculate distances
+    // Using your existing lat/lng columns for compatibility
     const { data: printShops, error } = await supabaseAdmin
       .from('print_shops')
       .select('*')
@@ -27,7 +27,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Calculate distances and filter by radius
     const nearbyShops = printShops
       ?.map(shop => {
-        const distance = calculateDistance(lat, lng, shop.latitude, shop.longitude);
+        // Use your existing lat/lng columns
+        const distance = calculateDistance(lat, lng, shop.lat, shop.lng);
         return { ...shop, distance };
       })
       .filter(shop => shop.distance <= radius)

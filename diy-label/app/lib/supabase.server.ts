@@ -15,13 +15,17 @@ export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   }
 });
 
-// Database types
+// Database types - Updated to match your existing schema
 export interface PrintShop {
-  id: string;
+  id: number; // bigint from your existing table
   name: string;
   address: string;
-  latitude: number;
-  longitude: number;
+  lat: number; // Your existing column
+  lng: number; // Your existing column
+  latitude: number; // New column for compatibility
+  longitude: number; // New column for compatibility
+  specialty: string; // Your existing column
+  rating: number; // Your existing column
   phone?: string;
   email?: string;
   website?: string;
@@ -54,7 +58,7 @@ export interface DIYLabelOrder {
   id: string;
   shopify_order_id: string;
   shopify_store_id: string;
-  print_shop_id?: string;
+  print_shop_id?: number; // bigint reference to your existing print_shops table
   product_data: Record<string, any>;
   customer_data: Record<string, any>;
   status: 'pending' | 'confirmed' | 'printing' | 'ready' | 'completed' | 'cancelled';
