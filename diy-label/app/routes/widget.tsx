@@ -61,6 +61,45 @@ export default function Widget() {
 
   return (
     <div>
+      {/* Mapbox CSS - Load first */}
+      <link 
+        href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" 
+        rel="stylesheet" 
+      />
+
+      {/* Custom CSS to ensure proper map rendering */}
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          .mapboxgl-map {
+            width: 100% !important;
+            height: 100% !important;
+          }
+          
+          .mapboxgl-canvas-container {
+            width: 100% !important;
+            height: 100% !important;
+          }
+          
+          .mapboxgl-canvas {
+            width: 100% !important;
+            height: 100% !important;
+          }
+          
+          #map-container {
+            position: relative;
+            overflow: hidden;
+          }
+          
+          #map {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+          }
+        `
+      }} />
+
       <div 
         id="diy-label-widget"
         data-shop={store.shop_domain}
@@ -120,14 +159,23 @@ export default function Widget() {
 
           <div id="map-container" style={{ 
             width: '100%', 
-            height: '300px', 
+            height: '400px', 
             borderRadius: '8px',
             backgroundColor: theme === 'dark' ? '#2a2a2a' : '#f8f9fa',
             border: '1px solid #ddd',
             display: 'none',
-            marginBottom: '20px'
+            marginBottom: '20px',
+            position: 'relative',
+            overflow: 'hidden'
           }}>
-            <div id="map" style={{ width: '100%', height: '100%', borderRadius: '8px' }}></div>
+            <div id="map" style={{ 
+              width: '100%', 
+              height: '100%', 
+              borderRadius: '8px',
+              position: 'absolute',
+              top: 0,
+              left: 0
+            }}></div>
           </div>
 
           <div id="shops-list" style={{ display: 'none' }}>
@@ -151,12 +199,6 @@ export default function Widget() {
           )}
         </div>
       </div>
-
-      {/* Mapbox CSS */}
-      <link 
-        href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" 
-        rel="stylesheet" 
-      />
 
       {/* Mapbox JS */}
       <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
@@ -245,13 +287,36 @@ export default function Widget() {
                   return;
                 }
 
+                // Ensure mapboxgl is loaded
+                if (typeof mapboxgl === 'undefined') {
+                  console.error('Mapbox GL JS not loaded');
+                  return;
+                }
+
                 mapboxgl.accessToken = config.mapboxToken;
                 
+                // Create map with proper container sizing
                 map = new mapboxgl.Map({
                   container: 'map',
                   style: theme === 'dark' ? 'mapbox://styles/mapbox/dark-v10' : 'mapbox://styles/mapbox/light-v10',
                   center: [lng, lat],
-                  zoom: 11
+                  zoom: 11,
+                  attributionControl: true
+                });
+
+                // Wait for map to load before adding markers
+                map.on('load', function() {
+                  console.log('Map loaded successfully');
+                  
+                  // Force resize to ensure tiles cover the entire canvas
+                  setTimeout(() => {
+                    map.resize();
+                  }, 100);
+                });
+
+                // Handle map resize
+                map.on('resize', function() {
+                  console.log('Map resized');
                 });
 
                 // Add user location marker
@@ -265,14 +330,16 @@ export default function Widget() {
 
               // Add print shop markers to map
               function addPrintShopMarkers(shops) {
+                if (!map) return;
+                
                 shops.forEach((shop, index) => {
                   const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(
-                    '<div style="padding: 10px;">' +
+                    '<div style="padding: 10px; max-width: 200px;">' +
                       '<h4 style="margin: 0 0 8px 0; font-size: 14px;">' + shop.name + '</h4>' +
                       '<p style="margin: 0 0 4px 0; font-size: 12px; color: #666;">' + shop.address + '</p>' +
                       '<p style="margin: 0 0 8px 0; font-size: 12px;">' + shop.specialty + '</p>' +
                       '<p style="margin: 0; font-size: 12px;"><strong>Rating:</strong> ' + shop.rating + '/5</p>' +
-                      '<button onclick="selectPrintShop(' + index + ')" style="margin-top: 8px; padding: 6px 12px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer;">Select This Shop</button>' +
+                      '<button onclick="selectPrintShop(' + index + ')" style="margin-top: 8px; padding: 6px 12px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Select This Shop</button>' +
                     '</div>'
                   );
 
@@ -281,6 +348,21 @@ export default function Widget() {
                     .setPopup(popup)
                     .addTo(map);
                 });
+
+                // Fit map to show all markers
+                if (shops.length > 0) {
+                  const bounds = new mapboxgl.LngLatBounds();
+                  
+                  // Add user location to bounds
+                  bounds.extend([userLocation.lng, userLocation.lat]);
+                  
+                  // Add all shop locations to bounds
+                  shops.forEach(shop => {
+                    bounds.extend([shop.lng, shop.lat]);
+                  });
+                  
+                  map.fitBounds(bounds, { padding: 50 });
+                }
               }
 
               // Display print shops list
@@ -332,15 +414,19 @@ export default function Widget() {
                   // Fetch nearby print shops
                   printShops = await fetchPrintShops(userLocation.lat, userLocation.lng);
                   
-                  // Initialize map
-                  initMap(userLocation.lat, userLocation.lng);
-                  
-                  // Add markers and display list
-                  addPrintShopMarkers(printShops);
-                  displayPrintShops(printShops);
-                  
-                  // Show map
+                  // Show map container first
                   mapContainer.style.display = 'block';
+                  
+                  // Wait a bit for container to be visible, then initialize map
+                  setTimeout(() => {
+                    initMap(userLocation.lat, userLocation.lng);
+                    
+                    // Wait for map to load, then add markers
+                    setTimeout(() => {
+                      addPrintShopMarkers(printShops);
+                      displayPrintShops(printShops);
+                    }, 1000);
+                  }, 100);
                   
                   updateStatus('Found ' + printShops.length + ' print shops near you');
                   
