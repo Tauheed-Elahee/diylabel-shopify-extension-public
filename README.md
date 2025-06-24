@@ -175,6 +175,86 @@ Embedded on product pages:
 - ❌ Access tokens
 - ❌ Private keys
 
+## 🧪 Test Your DIY Label Features
+
+Now that you have your app URL, here are the specific URLs to test:
+
+### Admin Dashboard (What you're already seeing)
+```
+https://accessed-watt-trademark-valium.trycloudflare.com/app
+```
+
+### Customer Widget (Test the customer-facing interface)
+```
+https://accessed-watt-trademark-valium.trycloudflare.com/widget?shop=YOUR_STORE.myshopify.com&product=PRODUCT_ID
+```
+
+### Print Shops API (Test nearby print shops)
+```
+https://accessed-watt-trademark-valium.trycloudflare.com/api/print-shops/nearby?lat=37.7749&lng=-122.4194&radius=25
+```
+
+### Database Diagnosis (Check if everything is working)
+```
+https://accessed-watt-trademark-valium.trycloudflare.com/diagnose-db
+```
+
+## 🎯 Quick Test Steps
+
+### 1. Test the Print Shops API:
+Open this URL in your browser:
+```
+https://accessed-watt-trademark-valium.trycloudflare.com/api/print-shops/nearby?lat=37.7749&lng=-122.4194&radius=25
+```
+You should see JSON data with nearby print shops.
+
+### 2. Test the Customer Widget:
+Replace YOUR_STORE with your actual store domain:
+```
+https://accessed-watt-trademark-valium.trycloudflare.com/widget?shop=YOUR_STORE.myshopify.com
+```
+
+### 3. Create a Test Order:
+```bash
+curl -X POST https://accessed-watt-trademark-valium.trycloudflare.com/api/orders/diy-label \
+  -H "Content-Type: application/json" \
+  -d '{
+    "shopifyOrderId": "test-order-123",
+    "shopDomain": "YOUR_STORE.myshopify.com",
+    "printShopId": 1,
+    "productData": {
+      "title": "Test T-Shirt",
+      "total": 25.00
+    },
+    "customerData": {
+      "name": "Test Customer",
+      "email": "test@example.com"
+    }
+  }'
+```
+
+## 🔄 If Your URL Changes
+
+The Cloudflare tunnel URL can change when you restart `shopify app dev`. If it does:
+
+1. Check the new URL in your terminal output
+2. Update your `.env` file if needed:
+   ```bash
+   APP_BASE_URL=https://new-url.trycloudflare.com
+   ```
+3. The `shopify.app.toml` file should update automatically
+
+## 🚀 What You Should See
+
+With 10 products enabled, you should see:
+
+- ✅ **Dashboard**: Shows your 10 enabled products
+- ✅ **Print Shops**: Shows your existing print shop data
+- ✅ **API**: Returns nearby print shops when tested
+- ✅ **Widget**: Shows the customer interface for selecting print shops
+
+Try the database diagnosis URL first to make sure everything is connected properly!
+
 ## 🆘 Troubleshooting
 
 ### Common Issues
