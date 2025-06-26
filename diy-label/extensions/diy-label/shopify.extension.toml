@@ -1,3 +1,7 @@
 name = "DIY Label"
-type = "theme"
+type = "theme_app_extension"
 
+[[extensions]]
+type = "app_embed"
+name = "DIY Label Global"
+handle = "diy-label-global"
