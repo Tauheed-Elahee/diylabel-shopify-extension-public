@@ -8,8 +8,8 @@ name = "DIY Label"
 handle = "diy-label"
 
   [[extensions.app_embeds]]
-  name = "DIY Label Embed"
-  handle = "diy-label-embed"
+  name = "DIY Label Global"
+  handle = "diy-label-global"
 
   [[extensions.blocks]]
   name = "DIY Label Widget"
