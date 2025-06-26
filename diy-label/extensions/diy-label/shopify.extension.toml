@@ -2,4 +2,4 @@ name = "DIY Label"
 type = "theme_app_extension"
 
 [extensions.app_embeds.diy-label-global]
-name = "DIY Label Global"
+name = "DIY Label"
