@@ -1,0 +1,483 @@
+{% comment %}
+  DIY Label Widget Section
+  Allows customers to find and select nearby print shops for sustainable local printing
+{% endcomment %}
+
+<div class="diy-label-widget-container" style="margin: {{ section.settings.margin }}px 0;">
+  {% if section.settings.enabled %}
+    <div id="diy-label-widget-{{ product.id }}" 
+         class="diy-label-widget"
+         data-product-id="{{ product.id }}"
+         data-shop-domain="{{ shop.permanent_domain }}"
+         data-theme="{{ section.settings.theme }}"
+         data-api-url="{{ section.settings.api_url | default: 'https://oval-transcript-facing-princeton.trycloudflare.com' }}"
+         style="
+           border: 1px solid {{ section.settings.border_color }};
+           border-radius: {{ section.settings.border_radius }}px;
+           padding: {{ section.settings.padding }}px;
+           background: {{ section.settings.background_color }};
+           font-family: {{ section.settings.font_family }};
+         ">
+      
+      <div class="diy-label-header" style="text-align: center; margin-bottom: 20px;">
+        <h3 style="
+          margin: 0 0 10px 0; 
+          font-size: {{ section.settings.heading_size }}px; 
+          color: {{ section.settings.heading_color }};
+          font-weight: 600;
+        ">
+          {{ section.settings.heading_text }}
+        </h3>
+        
+        {% if section.settings.show_description %}
+          <p style="
+            margin: 0; 
+            color: {{ section.settings.description_color }}; 
+            font-size: {{ section.settings.description_size }}px;
+            line-height: 1.4;
+          ">
+            {{ section.settings.description_text }}
+          </p>
+        {% endif %}
+      </div>
+
+      <div class="diy-label-loading" style="text-align: center; padding: 20px;">
+        <div style="
+          display: inline-block;
+          padding: 12px 24px;
+          background: {{ section.settings.status_bg_color }};
+          border-radius: 6px;
+          margin-bottom: 16px;
+        ">
+          <p style="
+            margin: 0; 
+            font-size: 14px; 
+            font-weight: 500;
+            color: {{ section.settings.status_text_color }};
+          ">
+            📍 Click "Find Print Shops" to get started
+          </p>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <button 
+            id="find-shops-btn-{{ product.id }}"
+            class="diy-label-find-btn"
+            style="
+              padding: {{ section.settings.button_padding }}px {{ section.settings.button_padding | times: 2 }}px;
+              background: {{ section.settings.button_bg_color }};
+              color: {{ section.settings.button_text_color }};
+              border: none;
+              border-radius: {{ section.settings.button_border_radius }}px;
+              font-size: {{ section.settings.button_font_size }}px;
+              font-weight: 600;
+              cursor: pointer;
+              transition: all 0.3s ease;
+            "
+            onmouseover="this.style.background='{{ section.settings.button_hover_color }}'"
+            onmouseout="this.style.background='{{ section.settings.button_bg_color }}'"
+          >
+            {{ section.settings.button_text }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Map Container -->
+      <div id="map-container-{{ product.id }}" style="
+        width: 100%; 
+        height: {{ section.settings.map_height }}px; 
+        border-radius: 8px;
+        background: {{ section.settings.map_bg_color }};
+        border: 1px solid {{ section.settings.border_color }};
+        display: none;
+        margin-bottom: 20px;
+        position: relative;
+        overflow: hidden;
+      ">
+        <div id="map-{{ product.id }}" style="
+          width: 100%; 
+          height: 100%; 
+          border-radius: 8px;
+          position: absolute;
+          top: 0;
+          left: 0;
+        "></div>
+      </div>
+
+      <!-- Print Shops List -->
+      <div id="shops-list-{{ product.id }}" style="display: none;">
+        <h4 style="
+          margin: 20px 0 10px 0; 
+          font-size: {{ section.settings.subheading_size }}px; 
+          font-weight: 600;
+          color: {{ section.settings.heading_color }};
+        ">
+          Nearby Print Shops
+        </h4>
+        <div id="shops-container-{{ product.id }}"></div>
+      </div>
+
+      {% if section.settings.show_sustainability_note %}
+        <div style="
+          padding: 12px;
+          background: {{ section.settings.sustainability_bg_color }};
+          border-radius: 6px;
+          margin-top: 16px;
+        ">
+          <p style="
+            margin: 0; 
+            font-size: {{ section.settings.sustainability_font_size }}px;
+            color: {{ section.settings.sustainability_text_color }};
+          ">
+            {{ section.settings.sustainability_text }}
+          </p>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Load Mapbox CSS -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+    
+    <!-- Load Mapbox JS -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+
+    <!-- DIY Label Widget Script -->
+    <script>
+      (function() {
+        const productId = '{{ product.id }}';
+        const apiUrl = '{{ section.settings.api_url | default: "https://oval-transcript-facing-princeton.trycloudflare.com" }}';
+        const shopDomain = '{{ shop.permanent_domain }}';
+        const theme = '{{ section.settings.theme }}';
+        
+        // Load the DIY Label widget script
+        const script = document.createElement('script');
+        script.src = apiUrl + '/widget-embed.js';
+        script.async = true;
+        script.onload = function() {
+          if (window.DIYLabelWidget) {
+            window.DIYLabelWidget.init({
+              containerId: 'diy-label-widget-' + productId,
+              productId: productId,
+              shopDomain: shopDomain,
+              theme: theme,
+              apiUrl: apiUrl
+            });
+          }
+        };
+        script.onerror = function() {
+          console.error('Failed to load DIY Label widget script');
+          document.getElementById('diy-label-widget-' + productId).innerHTML = 
+            '<p style="text-align: center; color: #d32f2f; padding: 20px;">Unable to load DIY Label widget. Please try again later.</p>';
+        };
+        document.head.appendChild(script);
+      })();
+    </script>
+  {% endif %}
+</div>
+
+{% schema %}
+{
+  "name": "DIY Label Widget",
+  "class": "diy-label-section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "General Settings"
+    },
+    {
+      "type": "checkbox",
+      "id": "enabled",
+      "label": "Enable DIY Label Widget",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "api_url",
+      "label": "DIY Label API URL",
+      "default": "https://oval-transcript-facing-princeton.trycloudflare.com",
+      "info": "The URL of your DIY Label app"
+    },
+    {
+      "type": "select",
+      "id": "theme",
+      "label": "Widget Theme",
+      "options": [
+        {
+          "value": "light",
+          "label": "Light"
+        },
+        {
+          "value": "dark", 
+          "label": "Dark"
+        },
+        {
+          "value": "auto",
+          "label": "Auto"
+        }
+      ],
+      "default": "light"
+    },
+    {
+      "type": "header",
+      "content": "Content Settings"
+    },
+    {
+      "type": "text",
+      "id": "heading_text",
+      "label": "Heading Text",
+      "default": "🌱 Choose Local Printing"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "Show Description",
+      "default": true
+    },
+    {
+      "type": "textarea",
+      "id": "description_text",
+      "label": "Description Text",
+      "default": "Support your local community and reduce shipping impact by printing this item at a nearby shop."
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button Text",
+      "default": "Find Print Shops Near Me"
+    },
+    {
+      "type": "header",
+      "content": "Styling"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border Color",
+      "default": "#e1e1e1"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "label": "Border Radius (px)",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "padding",
+      "label": "Padding (px)",
+      "min": 10,
+      "max": 40,
+      "step": 2,
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "margin",
+      "label": "Margin (px)",
+      "min": 0,
+      "max": 50,
+      "step": 5,
+      "default": 20
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "select",
+      "id": "font_family",
+      "label": "Font Family",
+      "options": [
+        {
+          "value": "system-ui, -apple-system, sans-serif",
+          "label": "System Font"
+        },
+        {
+          "value": "Arial, sans-serif",
+          "label": "Arial"
+        },
+        {
+          "value": "Helvetica, sans-serif",
+          "label": "Helvetica"
+        },
+        {
+          "value": "Georgia, serif",
+          "label": "Georgia"
+        }
+      ],
+      "default": "system-ui, -apple-system, sans-serif"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading Color",
+      "default": "#000000"
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "label": "Heading Font Size (px)",
+      "min": 14,
+      "max": 32,
+      "step": 1,
+      "default": 18
+    },
+    {
+      "type": "color",
+      "id": "description_color",
+      "label": "Description Color",
+      "default": "#666666"
+    },
+    {
+      "type": "range",
+      "id": "description_size",
+      "label": "Description Font Size (px)",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "subheading_size",
+      "label": "Subheading Font Size (px)",
+      "min": 14,
+      "max": 24,
+      "step": 1,
+      "default": 16
+    },
+    {
+      "type": "header",
+      "content": "Button Styling"
+    },
+    {
+      "type": "color",
+      "id": "button_bg_color",
+      "label": "Button Background Color",
+      "default": "#007cba"
+    },
+    {
+      "type": "color",
+      "id": "button_hover_color",
+      "label": "Button Hover Color",
+      "default": "#005a87"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button Text Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "range",
+      "id": "button_font_size",
+      "label": "Button Font Size (px)",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "button_padding",
+      "label": "Button Padding (px)",
+      "min": 8,
+      "max": 20,
+      "step": 1,
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "button_border_radius",
+      "label": "Button Border Radius (px)",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "default": 6
+    },
+    {
+      "type": "header",
+      "content": "Status & Map"
+    },
+    {
+      "type": "color",
+      "id": "status_bg_color",
+      "label": "Status Background Color",
+      "default": "#f5f5f5"
+    },
+    {
+      "type": "color",
+      "id": "status_text_color",
+      "label": "Status Text Color",
+      "default": "#333333"
+    },
+    {
+      "type": "color",
+      "id": "map_bg_color",
+      "label": "Map Background Color",
+      "default": "#f8f9fa"
+    },
+    {
+      "type": "range",
+      "id": "map_height",
+      "label": "Map Height (px)",
+      "min": 300,
+      "max": 600,
+      "step": 50,
+      "default": 400
+    },
+    {
+      "type": "header",
+      "content": "Sustainability Message"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sustainability_note",
+      "label": "Show Sustainability Note",
+      "default": true
+    },
+    {
+      "type": "textarea",
+      "id": "sustainability_text",
+      "label": "Sustainability Text",
+      "default": "♻️ Ask about printing on reused apparel for extra sustainability!"
+    },
+    {
+      "type": "color",
+      "id": "sustainability_bg_color",
+      "label": "Sustainability Background Color",
+      "default": "#e8f5e8"
+    },
+    {
+      "type": "color",
+      "id": "sustainability_text_color",
+      "label": "Sustainability Text Color",
+      "default": "#2d5a2d"
+    },
+    {
+      "type": "range",
+      "id": "sustainability_font_size",
+      "label": "Sustainability Font Size (px)",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "default": 14
+    }
+  ],
+  "presets": [
+    {
+      "name": "DIY Label Widget",
+      "category": "Custom"
+    }
+  ]
+}
+{% endschema %}
