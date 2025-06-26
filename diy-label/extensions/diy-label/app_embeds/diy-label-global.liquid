@@ -1,0 +1,531 @@
+{% comment %}
+  DIY Label Global App Embed
+  Automatically loads on all pages and shows widget on product pages with DIY Label enabled
+{% endcomment %}
+
+<!-- Global DIY Label Configuration -->
+<script>
+  window.DIYLabelConfig = {
+    apiUrl: '{{ app_embed.settings.api_url | default: "https://oval-transcript-facing-princeton.trycloudflare.com" }}',
+    shopDomain: '{{ shop.permanent_domain }}',
+    enabled: {{ app_embed.settings.enabled | json }},
+    theme: {{ app_embed.settings.theme | json }},
+    autoDetect: true,
+    settings: {
+      defaultRadius: {{ app_embed.settings.default_radius | json }},
+      showSustainabilityNote: {{ app_embed.settings.show_sustainability_note | json }},
+      buttonColor: {{ app_embed.settings.button_color | json }},
+      borderRadius: {{ app_embed.settings.border_radius | json }}
+    }
+  };
+</script>
+
+{% if app_embed.settings.enabled %}
+  <!-- Global CSS for DIY Label Auto-Widgets -->
+  <style>
+    .diy-label-auto-widget {
+      margin: {{ app_embed.settings.margin }}px 0;
+      padding: {{ app_embed.settings.padding }}px;
+      border: 1px solid {{ app_embed.settings.border_color }};
+      border-radius: {{ app_embed.settings.border_radius }}px;
+      background: {{ app_embed.settings.background_color }};
+      font-family: {{ app_embed.settings.font_family }};
+    }
+
+    .diy-label-auto-widget h3 {
+      margin: 0 0 10px 0;
+      font-size: {{ app_embed.settings.heading_size }}px;
+      color: {{ app_embed.settings.heading_color }};
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .diy-label-auto-widget p {
+      margin: 0 0 16px 0;
+      color: {{ app_embed.settings.text_color }};
+      font-size: {{ app_embed.settings.text_size }}px;
+      line-height: 1.4;
+      text-align: center;
+    }
+
+    .diy-label-find-btn {
+      padding: {{ app_embed.settings.button_padding }}px {{ app_embed.settings.button_padding | times: 2 }}px;
+      background: {{ app_embed.settings.button_color }};
+      color: {{ app_embed.settings.button_text_color }};
+      border: none;
+      border-radius: {{ app_embed.settings.button_border_radius }}px;
+      font-size: {{ app_embed.settings.button_font_size }}px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .diy-label-find-btn:hover {
+      background: {{ app_embed.settings.button_hover_color }};
+      transform: translateY(-1px);
+    }
+
+    .diy-label-sustainability-note {
+      padding: 12px;
+      background: {{ app_embed.settings.sustainability_bg_color }};
+      border-radius: 6px;
+      margin-top: 16px;
+      font-size: {{ app_embed.settings.sustainability_font_size }}px;
+      color: {{ app_embed.settings.sustainability_text_color }};
+      text-align: center;
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+      .diy-label-auto-widget {
+        margin: {{ app_embed.settings.margin | divided_by: 2 }}px 0;
+        padding: {{ app_embed.settings.padding | divided_by: 1.5 }}px;
+      }
+      
+      .diy-label-auto-widget h3 {
+        font-size: {{ app_embed.settings.heading_size | minus: 2 }}px;
+      }
+      
+      .diy-label-auto-widget p {
+        font-size: {{ app_embed.settings.text_size | minus: 1 }}px;
+      }
+    }
+
+    /* Loading animation */
+    .diy-label-loading {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .diy-label-loading::after {
+      content: '';
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid {{ app_embed.settings.button_color }};
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: diy-label-spin 1s ease-in-out infinite;
+      margin-left: 10px;
+    }
+
+    @keyframes diy-label-spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+
+  <!-- Load Mapbox CSS globally -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+
+  <!-- Load DIY Label Widget Script -->
+  <script src="{{ app_embed.settings.api_url | default: 'https://oval-transcript-facing-princeton.trycloudflare.com' }}/widget-embed.js" async></script>
+
+  <!-- Auto-initialization script -->
+  <script>
+    (function() {
+      'use strict';
+      
+      // Wait for DOM to be ready
+      function ready(fn) {
+        if (document.readyState !== 'loading') {
+          fn();
+        } else {
+          document.addEventListener('DOMContentLoaded', fn);
+        }
+      }
+
+      ready(function() {
+        // Only run on product pages if auto-detect is enabled
+        if (window.DIYLabelConfig && window.DIYLabelConfig.autoDetect) {
+          
+          // Check if we're on a product page
+          const isProductPage = window.location.pathname.includes('/products/') || 
+                               document.querySelector('[data-product-id]') ||
+                               window.ShopifyAnalytics?.meta?.product;
+
+          if (isProductPage && window.DIYLabelConfig.enabled) {
+            
+            // Try to get product ID from various sources
+            let productId = null;
+            
+            // Method 1: From Shopify Analytics
+            if (window.ShopifyAnalytics?.meta?.product?.id) {
+              productId = window.ShopifyAnalytics.meta.product.id;
+            }
+            
+            // Method 2: From existing product data elements
+            const productElement = document.querySelector('[data-product-id]');
+            if (productElement && !productId) {
+              productId = productElement.getAttribute('data-product-id');
+            }
+            
+            // Method 3: From URL (last resort)
+            if (!productId) {
+              const pathParts = window.location.pathname.split('/');
+              const productIndex = pathParts.indexOf('products');
+              if (productIndex !== -1 && pathParts[productIndex + 1]) {
+                // This will be the product handle, we'll need to convert it
+                console.log('DIY Label: Product handle detected:', pathParts[productIndex + 1]);
+              }
+            }
+
+            if (productId) {
+              console.log('DIY Label: Product detected:', productId);
+              
+              // Check if DIY Label is enabled for this product
+              checkProductDIYLabelStatus(productId);
+            }
+          }
+        }
+      });
+
+      // Function to check if DIY Label is enabled for a product
+      function checkProductDIYLabelStatus(productId) {
+        const apiUrl = window.DIYLabelConfig.apiUrl;
+        const shopDomain = window.DIYLabelConfig.shopDomain;
+        
+        // Make API call to check product settings
+        fetch(`${apiUrl}/api/product-settings?shop=${encodeURIComponent(shopDomain)}&product=${encodeURIComponent(productId)}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.enabled) {
+              console.log('DIY Label: Enabled for product', productId);
+              injectDIYLabelWidget(productId);
+            } else {
+              console.log('DIY Label: Not enabled for product', productId);
+            }
+          })
+          .catch(error => {
+            console.log('DIY Label: Could not check product settings, showing widget anyway');
+            // If we can't check, show the widget anyway (graceful degradation)
+            injectDIYLabelWidget(productId);
+          });
+      }
+
+      // Function to inject the DIY Label widget
+      function injectDIYLabelWidget(productId) {
+        // Look for existing DIY Label containers first
+        let container = document.querySelector('.diy-label-auto-widget');
+        
+        if (!container) {
+          // Try to find a good place to inject the widget
+          const targets = [
+            '.product-form',
+            '.product__form',
+            '.product-single__form',
+            '.shopify-product-form',
+            '[data-product-form]',
+            '.product-form-container',
+            '.product__info',
+            '.product-info',
+            '.product-details'
+          ];
+
+          let targetElement = null;
+          for (const selector of targets) {
+            targetElement = document.querySelector(selector);
+            if (targetElement) break;
+          }
+
+          // If no specific target found, try to find the product container
+          if (!targetElement) {
+            targetElement = document.querySelector('.product') || 
+                           document.querySelector('[data-product]') ||
+                           document.querySelector('main');
+          }
+
+          if (targetElement) {
+            // Create the widget container
+            container = document.createElement('div');
+            container.className = 'diy-label-auto-widget';
+            container.setAttribute('data-product-id', productId);
+            container.setAttribute('data-auto-init', 'true');
+            container.id = 'diy-label-auto-' + productId;
+
+            // Add initial content
+            container.innerHTML = `
+              <h3>🌱 Choose Local Printing</h3>
+              <p>Support your local community and reduce shipping impact by printing this item at a nearby shop.</p>
+              <div class="diy-label-loading">
+                <p>Loading local printing options...</p>
+              </div>
+            `;
+
+            // Insert after the target element
+            targetElement.parentNode.insertBefore(container, targetElement.nextSibling);
+            
+            console.log('DIY Label: Widget container created');
+          }
+        }
+
+        // Initialize the widget if the script is loaded
+        if (window.DIYLabelWidget && container) {
+          window.DIYLabelWidget.init({
+            containerId: container.id,
+            productId: productId,
+            shopDomain: window.DIYLabelConfig.shopDomain,
+            theme: window.DIYLabelConfig.theme,
+            apiUrl: window.DIYLabelConfig.apiUrl
+          });
+        } else {
+          // Wait for the widget script to load
+          const checkWidget = setInterval(() => {
+            if (window.DIYLabelWidget && container) {
+              clearInterval(checkWidget);
+              window.DIYLabelWidget.init({
+                containerId: container.id,
+                productId: productId,
+                shopDomain: window.DIYLabelConfig.shopDomain,
+                theme: window.DIYLabelConfig.theme,
+                apiUrl: window.DIYLabelConfig.apiUrl
+              });
+            }
+          }, 100);
+          
+          // Stop checking after 10 seconds
+          setTimeout(() => clearInterval(checkWidget), 10000);
+        }
+      }
+
+    })();
+  </script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "DIY Label",
+  "target": "head",
+  "settings": [
+    {
+      "type": "header",
+      "content": "General Settings"
+    },
+    {
+      "type": "checkbox",
+      "id": "enabled",
+      "label": "Enable DIY Label globally",
+      "default": true,
+      "info": "When enabled, DIY Label will automatically appear on product pages where it's configured"
+    },
+    {
+      "type": "text",
+      "id": "api_url",
+      "label": "DIY Label API URL",
+      "default": "https://oval-transcript-facing-princeton.trycloudflare.com",
+      "info": "The URL of your DIY Label app"
+    },
+    {
+      "type": "select",
+      "id": "theme",
+      "label": "Widget Theme",
+      "options": [
+        {
+          "value": "light",
+          "label": "Light"
+        },
+        {
+          "value": "dark", 
+          "label": "Dark"
+        },
+        {
+          "value": "auto",
+          "label": "Auto (matches theme)"
+        }
+      ],
+      "default": "auto"
+    },
+    {
+      "type": "range",
+      "id": "default_radius",
+      "label": "Default Search Radius (miles)",
+      "min": 5,
+      "max": 100,
+      "step": 5,
+      "default": 25
+    },
+    {
+      "type": "header",
+      "content": "Appearance"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border Color",
+      "default": "#e1e1e1"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "label": "Border Radius (px)",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "padding",
+      "label": "Padding (px)",
+      "min": 10,
+      "max": 40,
+      "step": 2,
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "margin",
+      "label": "Margin (px)",
+      "min": 0,
+      "max": 50,
+      "step": 5,
+      "default": 20
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "select",
+      "id": "font_family",
+      "label": "Font Family",
+      "options": [
+        {
+          "value": "inherit",
+          "label": "Theme Default"
+        },
+        {
+          "value": "system-ui, -apple-system, sans-serif",
+          "label": "System Font"
+        },
+        {
+          "value": "Arial, sans-serif",
+          "label": "Arial"
+        },
+        {
+          "value": "Helvetica, sans-serif",
+          "label": "Helvetica"
+        }
+      ],
+      "default": "inherit"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading Color",
+      "default": "#000000"
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "label": "Heading Font Size (px)",
+      "min": 14,
+      "max": 32,
+      "step": 1,
+      "default": 18
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text Color",
+      "default": "#666666"
+    },
+    {
+      "type": "range",
+      "id": "text_size",
+      "label": "Text Font Size (px)",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "default": 14
+    },
+    {
+      "type": "header",
+      "content": "Button Styling"
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button Color",
+      "default": "#007cba"
+    },
+    {
+      "type": "color",
+      "id": "button_hover_color",
+      "label": "Button Hover Color",
+      "default": "#005a87"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button Text Color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "range",
+      "id": "button_font_size",
+      "label": "Button Font Size (px)",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "button_padding",
+      "label": "Button Padding (px)",
+      "min": 8,
+      "max": 20,
+      "step": 1,
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "button_border_radius",
+      "label": "Button Border Radius (px)",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "default": 6
+    },
+    {
+      "type": "header",
+      "content": "Sustainability Message"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_sustainability_note",
+      "label": "Show Sustainability Note",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "sustainability_bg_color",
+      "label": "Sustainability Background Color",
+      "default": "#e8f5e8"
+    },
+    {
+      "type": "color",
+      "id": "sustainability_text_color",
+      "label": "Sustainability Text Color",
+      "default": "#2d5a2d"
+    },
+    {
+      "type": "range",
+      "id": "sustainability_font_size",
+      "label": "Sustainability Font Size (px)",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "default": 14
+    }
+  ]
+}
+{% endschema %}
