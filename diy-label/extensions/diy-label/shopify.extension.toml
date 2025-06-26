@@ -1,14 +1,19 @@
-name = "DIY Label"
+# Learn more about configuring your extension at https://shopify.dev/docs/apps/app-extensions/configuration
+
+api_version = "2025-04"
+
+[[extensions]]
 type = "theme_app_extension"
+name = "DIY Label"
 
-[[extensions.app_embeds]]
-name = "DIY Label Embed"
-handle = "diy-label-embed"
+  [[extensions.app_embeds]]
+  name = "DIY Label Embed"
+  handle = "diy-label-embed"
 
-[[extensions.blocks]]
-name = "DIY Label Widget"
-handle = "diy-label-widget"
+  [[extensions.blocks]]
+  name = "DIY Label Widget"
+  handle = "diy-label-widget"
 
-[[extensions.sections]]
-name = "DIY Label Section"
-handle = "diy-label-section"
+  [[extensions.sections]]
+  name = "DIY Label Section"
+  handle = "diy-label-section"
