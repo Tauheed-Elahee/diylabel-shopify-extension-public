@@ -1,6 +1,7 @@
 {% comment %}
   DIY Label App Embed
   This loads globally when enabled in theme customizer
+  Combines functionality from all app embed variants
 {% endcomment %}
 
 {% if app.enabled %}
@@ -11,6 +12,7 @@
     theme: {{ app.theme | default: 'light' | json }},
     searchRadius: {{ app.search_radius | default: 25 | json }},
     showOnAllProducts: {{ app.show_on_all_products | default: false | json }},
+    autoInject: {{ app.auto_inject | default: true | json }},
     apiUrl: {{ app.api_url | default: 'https://increasing-exercise-calculation-yo.trycloudflare.com' | json }},
     shopDomain: {{ shop.permanent_domain | json }}
   };
@@ -23,8 +25,9 @@
   // Only run on product pages or if show_on_all_products is enabled
   const isProductPage = window.location.pathname.includes('/products/');
   const showOnAllProducts = window.DIYLabelConfig.settings.showOnAllProducts;
+  const autoInject = window.DIYLabelConfig.settings.autoInject;
   
-  if (!isProductPage && !showOnAllProducts) {
+  if (!autoInject || (!isProductPage && !showOnAllProducts)) {
     return;
   }
   
@@ -275,6 +278,13 @@
       "type": "checkbox",
       "id": "enabled",
       "label": "Enable DIY Label",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "auto_inject",
+      "label": "Auto-inject on Product Pages",
+      "info": "Automatically add widget to product pages when enabled",
       "default": true
     },
     {
