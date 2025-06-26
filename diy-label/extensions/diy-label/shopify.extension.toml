@@ -5,6 +5,7 @@ api_version = "2025-04"
 [[extensions]]
 type = "theme_app_extension"
 name = "DIY Label"
+handle = "diy-label"
 
   [[extensions.app_embeds]]
   name = "DIY Label Embed"
