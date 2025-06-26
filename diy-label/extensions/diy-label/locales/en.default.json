@@ -1,10 +1,27 @@
 {
-  "ratings": {
-    "stars": {
-      "label": "Ratings"
+  "diy_label": {
+    "widget": {
+      "heading": "Choose Local Printing",
+      "description": "Support your local community and reduce shipping impact by printing this item at a nearby shop.",
+      "button_text": "Find Print Shops Near Me",
+      "loading": "Loading local printing options...",
+      "location_prompt": "Click \"Find Print Shops\" to get started",
+      "nearby_shops": "Nearby Print Shops",
+      "sustainability_note": "Ask about printing on reused apparel for extra sustainability!",
+      "error_loading": "Unable to load DIY Label widget. Please try again later.",
+      "no_shops_found": "No print shops found within the search radius. Try increasing the search area.",
+      "location_denied": "Location access denied. Please enable location services to find nearby print shops.",
+      "select_shop": "Select This Print Shop",
+      "shop_selected": "Print shop selected successfully!"
     },
-    "home": {
-      "recommendationText": "Recommended Product!"
+    "shop_details": {
+      "rating": "Rating",
+      "distance": "Distance",
+      "phone": "Phone",
+      "email": "Email",
+      "website": "Website",
+      "hours": "Hours",
+      "capabilities": "Services"
     }
   }
 }
