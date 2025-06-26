@@ -1,0 +1,42 @@
+{% comment %}
+  DIY Label App Embed
+  This script loads on every page when the app embed is enabled
+{% endcomment %}
+
+<script src="{{ 'app-embed.js' | asset_url }}" defer></script>
+
+<script>
+  // Initialize DIY Label when the script loads
+  document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit for Shopify to load
+    setTimeout(function() {
+      if (window.DIYLabelEmbed) {
+        window.DIYLabelEmbed.init({
+          enabled: {{ app.metafields.diy_label.enabled | default: true | json }},
+          widget_theme: {{ app.metafields.diy_label.widget_theme | default: 'light' | json }},
+          default_radius: {{ app.metafields.diy_label.default_radius | default: 25 | json }},
+          show_on_all_products: {{ app.metafields.diy_label.show_on_all_products | default: false | json }},
+          api_url: {{ app.metafields.diy_label.api_url | default: 'https://increasing-exercise-calculation-yo.trycloudflare.com' | json }}
+        });
+      }
+    }, 100);
+  });
+</script>
+
+<!-- Optional: Add some basic styling -->
+<style>
+  #diy-label-widget-container {
+    transition: all 0.3s ease;
+  }
+  
+  #diy-label-widget-container iframe {
+    transition: height 0.3s ease;
+  }
+  
+  @media (max-width: 768px) {
+    #diy-label-widget-container {
+      margin: 15px 0;
+      padding: 15px;
+    }
+  }
+</style>
