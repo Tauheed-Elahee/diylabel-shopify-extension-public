@@ -1,5 +1,12 @@
 name = "diy-label"
-type = "app_embed"
+type = "theme"
+
+[extension_points]
+  [[extension_points.targets]]
+  target = "head"
+  
+  [[extension_points.targets]]
+  target = "body_end"
 
 [settings]
   [[settings.fields]]
@@ -33,3 +40,10 @@ type = "app_embed"
   description = "Display widget on all products (overrides per-product settings)"
   type = "boolean"
   default = false
+
+  [[settings.fields]]
+  key = "api_url"
+  name = "API URL"
+  description = "DIY Label API endpoint"
+  type = "url"
+  default = "https://increasing-exercise-calculation-yo.trycloudflare.com"

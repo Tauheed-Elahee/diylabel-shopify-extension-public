@@ -1,0 +1,21 @@
+{% comment %}
+  DIY Label - Head injection
+  Sets up configuration and loads core scripts
+{% endcomment %}
+
+{% if settings.enabled %}
+<script>
+  // DIY Label Configuration
+  window.DIYLabelConfig = {
+    enabled: {{ settings.enabled | json }},
+    widget_theme: {{ settings.widget_theme | default: 'light' | json }},
+    default_radius: {{ settings.default_radius | default: 25 | json }},
+    show_on_all_products: {{ settings.show_on_all_products | default: false | json }},
+    api_url: {{ settings.api_url | default: 'https://increasing-exercise-calculation-yo.trycloudflare.com' | json }},
+    shop_domain: {{ shop.permanent_domain | json }}
+  };
+</script>
+
+<!-- Preload the widget iframe for better performance -->
+<link rel="dns-prefetch" href="{{ settings.api_url | default: 'https://increasing-exercise-calculation-yo.trycloudflare.com' }}">
+{% endif %}
