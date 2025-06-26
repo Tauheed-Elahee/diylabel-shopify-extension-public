@@ -6,9 +6,3 @@ api_version = "2025-04"
 type = "theme_app_extension"
 name = "DIY Label"
 handle = "diy-label"
-
-[extensions.app_embeds]
-
-[extensions.blocks]
-
-[extensions.sections]
