@@ -71,23 +71,6 @@
     return;
   }
   
-  // Function to check if DIY Label is enabled for this product
-  async function checkProductSettings() {
-    try {
-      const response = await fetch(
-        `${apiUrl}/api/product-settings?shop=${encodeURIComponent(shopDomain)}&product=${encodeURIComponent(productId)}`
-      );
-      
-      if (!response.ok) return false;
-      
-      const data = await response.json();
-      return data.enabled || false;
-    } catch (error) {
-      console.error('DIY Label: Error checking product settings:', error);
-      return false;
-    }
-  }
-  
   // Function to load the widget iframe
   function loadWidget() {
     const iframe = document.createElement('iframe');
@@ -135,16 +118,7 @@
   }
   
   // Initialize the widget
-  async function initializeWidget() {
-    {% unless block.settings.show_on_all_products %}
-    // Check if DIY Label is enabled for this product
-    const isEnabled = await checkProductSettings();
-    if (!isEnabled) {
-      widgetElement.style.display = 'none';
-      return;
-    }
-    {% endunless %}
-    
+  function initializeWidget() {
     loadWidget();
   }
   
@@ -265,13 +239,6 @@
       "max": 800,
       "step": 50,
       "default": 500
-    },
-    {
-      "type": "checkbox",
-      "id": "show_on_all_products",
-      "label": "Show on All Products",
-      "info": "Display widget even if not enabled for specific product",
-      "default": false
     },
     {
       "type": "url",

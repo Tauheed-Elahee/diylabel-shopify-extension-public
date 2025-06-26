@@ -119,25 +119,6 @@
   const radius = widgetElement.getAttribute('data-radius');
   const apiUrl = widgetElement.getAttribute('data-api-url');
   
-  // Function to check if DIY Label is enabled for this product
-  async function checkProductSettings() {
-    if (!productId) return {{ section.settings.show_on_all_pages | json }};
-    
-    try {
-      const response = await fetch(
-        `${apiUrl}/api/product-settings?shop=${encodeURIComponent(shopDomain)}&product=${encodeURIComponent(productId)}`
-      );
-      
-      if (!response.ok) return false;
-      
-      const data = await response.json();
-      return data.enabled || false;
-    } catch (error) {
-      console.error('DIY Label: Error checking product settings:', error);
-      return false;
-    }
-  }
-  
   // Function to load the widget iframe
   function loadWidget() {
     const iframe = document.createElement('iframe');
@@ -183,29 +164,9 @@
     widgetElement.appendChild(iframe);
   }
   
-  // Function to show not available message
-  function showNotAvailable() {
-    widgetElement.innerHTML = `
-      <div style="text-align: center; padding: 60px 20px; color: #666;">
-        <h4 style="margin: 0 0 10px 0;">DIY Label Not Available</h4>
-        <p style="margin: 0;">This feature is only available on enabled product pages.</p>
-      </div>
-    `;
-  }
-  
   // Initialize the widget
-  async function initializeWidget() {
-    const shouldShow = await checkProductSettings();
-    
-    if (shouldShow) {
-      loadWidget();
-    } else {
-      {% if section.settings.hide_when_not_available %}
-        widgetElement.closest('.diy-label-section').style.display = 'none';
-      {% else %}
-        showNotAvailable();
-      {% endif %}
-    }
+  function initializeWidget() {
+    loadWidget();
   }
   
   // Start initialization
@@ -408,20 +369,6 @@
       "max": 800,
       "step": 50,
       "default": 600
-    },
-    {
-      "type": "checkbox",
-      "id": "show_on_all_pages",
-      "label": "Show on All Pages",
-      "info": "Display widget even when not on a product page or product not enabled",
-      "default": false
-    },
-    {
-      "type": "checkbox",
-      "id": "hide_when_not_available",
-      "label": "Hide Section When Not Available",
-      "info": "Hide entire section if DIY Label is not available",
-      "default": false
     },
     {
       "type": "url",

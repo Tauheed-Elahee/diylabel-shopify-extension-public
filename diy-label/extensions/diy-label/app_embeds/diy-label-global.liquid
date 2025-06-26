@@ -14,8 +14,6 @@
     apiUrl: {{ app.api_url | default: 'https://increasing-exercise-calculation-yo.trycloudflare.com' | json }},
     shopDomain: {{ shop.permanent_domain | json }}
   };
-  
-  console.log('DIY Label Config loaded:', window.DIYLabelConfig.settings);
 </script>
 
 <script>
@@ -26,10 +24,7 @@
   const isProductPage = window.location.pathname.includes('/products/');
   const showOnAllProducts = window.DIYLabelConfig.settings.showOnAllProducts;
   
-  console.log('DIY Label: Page check - isProductPage:', isProductPage, 'showOnAllProducts:', showOnAllProducts);
-  
   if (!isProductPage && !showOnAllProducts) {
-    console.log('DIY Label: Skipping - not product page and not enabled for all products');
     return;
   }
   
@@ -37,78 +32,53 @@
   let productId = null;
   
   if (isProductPage) {
-    // Try multiple methods to get product ID
-    
-    // Method 1: Meta tag
+    // Try to get product ID from meta tag
     const productMeta = document.querySelector('meta[property="product:id"]');
     if (productMeta) {
       productId = productMeta.getAttribute('content');
-      console.log('DIY Label: Product ID from meta tag:', productId);
     }
     
-    // Method 2: Shopify global object
+    // Fallback: try to get from Shopify global object
     if (!productId && typeof window.ShopifyAnalytics !== 'undefined' && window.ShopifyAnalytics.meta) {
       productId = window.ShopifyAnalytics.meta.product?.id;
-      console.log('DIY Label: Product ID from ShopifyAnalytics:', productId);
     }
     
-    // Method 3: Try to find product data in page
+    // Another fallback: try to get from URL
     if (!productId) {
-      const scripts = document.querySelectorAll('script[type="application/ld+json"]');
-      for (const script of scripts) {
-        try {
-          const data = JSON.parse(script.textContent);
-          if (data['@type'] === 'Product' && data.productID) {
-            productId = data.productID;
-            console.log('DIY Label: Product ID from JSON-LD:', productId);
-            break;
-          }
-        } catch (e) {
-          // Ignore parsing errors
-        }
+      const pathParts = window.location.pathname.split('/');
+      const productIndex = pathParts.indexOf('products');
+      if (productIndex !== -1 && pathParts[productIndex + 1]) {
+        const productHandle = pathParts[productIndex + 1];
+        productId = productHandle;
       }
-    }
-    
-    // Method 4: Look for Shopify product object
-    if (!productId && typeof window.product !== 'undefined' && window.product.id) {
-      productId = window.product.id;
-      console.log('DIY Label: Product ID from window.product:', productId);
     }
   }
   
   // Function to check if DIY Label is enabled for this product
   async function checkProductSettings(productId) {
-    if (!productId) return showOnAllProducts;
+    if (!productId) return false;
     
     try {
-      console.log('DIY Label: Checking product settings for:', productId);
       const response = await fetch(
         `${window.DIYLabelConfig.settings.apiUrl}/api/product-settings?shop=${encodeURIComponent(window.DIYLabelConfig.settings.shopDomain)}&product=${encodeURIComponent(productId)}`
       );
       
-      if (!response.ok) {
-        console.log('DIY Label: Product settings API failed:', response.status);
-        return showOnAllProducts;
-      }
+      if (!response.ok) return false;
       
       const data = await response.json();
-      console.log('DIY Label: Product settings response:', data);
-      return data.enabled || showOnAllProducts;
+      return data.enabled || false;
     } catch (error) {
       console.error('DIY Label: Error checking product settings:', error);
-      return showOnAllProducts;
+      return false;
     }
   }
   
   // Function to create and inject the widget
   function createWidget(productId) {
     // Check if widget already exists
-    if (document.getElementById('diy-label-auto-widget')) {
-      console.log('DIY Label: Widget already exists');
+    if (document.getElementById('diy-label-widget-container')) {
       return;
     }
-    
-    console.log('DIY Label: Creating widget for product:', productId);
     
     // Find a good place to inject the widget
     let targetElement = null;
@@ -125,17 +95,12 @@
       '.product-info',
       '.product-details',
       '.product__content',
-      '.product-content',
-      '.product__description',
-      '.product-description'
+      '.product-content'
     ];
     
     for (const selector of selectors) {
       targetElement = document.querySelector(selector);
-      if (targetElement) {
-        console.log('DIY Label: Found target element:', selector);
-        break;
-      }
+      if (targetElement) break;
     }
     
     // Fallback: try to find any form with product in the action
@@ -144,7 +109,6 @@
       for (const form of forms) {
         if (form.action && form.action.includes('/cart/add')) {
           targetElement = form.parentElement;
-          console.log('DIY Label: Found target via cart form');
           break;
         }
       }
@@ -152,15 +116,14 @@
     
     // Last resort: append to main content area
     if (!targetElement) {
-      targetElement = document.querySelector('main') || document.querySelector('.main') || document.body;
-      console.log('DIY Label: Using fallback target element');
+      targetElement = document.querySelector('main') || document.body;
     }
     
     // Create widget container
     const widgetContainer = document.createElement('div');
-    widgetContainer.id = 'diy-label-auto-widget';
+    widgetContainer.id = 'diy-label-widget-container';
     widgetContainer.style.cssText = `
-      margin: 30px 0;
+      margin: 20px 0;
       padding: 20px;
       border: 1px solid #e1e1e1;
       border-radius: 8px;
@@ -170,8 +133,8 @@
     
     // Create widget content
     widgetContainer.innerHTML = `
-      <div id="diy-label-widget-auto" 
-           data-product-id="${productId || ''}"
+      <div id="diy-label-widget" 
+           data-product-id="${productId}"
            data-shop-domain="${window.DIYLabelConfig.settings.shopDomain}"
            data-theme="${window.DIYLabelConfig.settings.theme}"
            data-radius="${window.DIYLabelConfig.settings.searchRadius}"
@@ -201,19 +164,14 @@
   
   // Function to load the widget iframe
   function loadWidgetIframe(productId) {
-    const widgetElement = document.getElementById('diy-label-widget-auto');
-    if (!widgetElement) {
-      console.error('DIY Label: Widget element not found');
-      return;
-    }
-    
-    console.log('DIY Label: Loading iframe for product:', productId);
+    const widgetElement = document.getElementById('diy-label-widget');
+    if (!widgetElement) return;
     
     // Create iframe
     const iframe = document.createElement('iframe');
     iframe.src = `${window.DIYLabelConfig.settings.apiUrl}/widget?` + 
       `shop=${encodeURIComponent(window.DIYLabelConfig.settings.shopDomain)}&` +
-      `${productId ? 'product=' + encodeURIComponent(productId) + '&' : ''}` +
+      `product=${encodeURIComponent(productId)}&` +
       `theme=${encodeURIComponent(window.DIYLabelConfig.settings.theme)}`;
     
     iframe.style.cssText = `
@@ -226,23 +184,9 @@
     iframe.frameBorder = '0';
     iframe.loading = 'lazy';
     
-    console.log('DIY Label: Iframe src:', iframe.src);
-    
-    // Handle iframe load events
-    iframe.onload = function() {
-      console.log('DIY Label: Iframe loaded successfully');
-    };
-    
-    iframe.onerror = function() {
-      console.error('DIY Label: Iframe failed to load');
-      showErrorMessage('Unable to load DIY Label widget');
-    };
-    
     // Handle iframe messages for dynamic resizing
     window.addEventListener('message', function(event) {
       if (event.origin !== window.DIYLabelConfig.settings.apiUrl) return;
-      
-      console.log('DIY Label: Received message:', event.data);
       
       if (event.data.type === 'diy-label-resize') {
         iframe.style.height = Math.max(400, event.data.height) + 'px';
@@ -307,7 +251,7 @@
   
   // Function to show error message
   function showErrorMessage(errorText) {
-    const widgetElement = document.getElementById('diy-label-widget-auto');
+    const widgetElement = document.getElementById('diy-label-widget');
     if (widgetElement) {
       widgetElement.innerHTML = `
         <div style="text-align: center; padding: 40px 20px; color: #d32f2f;">
@@ -320,15 +264,18 @@
   
   // Main initialization function
   async function initializeDIYLabel() {
-    console.log('DIY Label: Initializing with product ID:', productId);
+    if (!productId) {
+      console.log('DIY Label: No product ID found, skipping widget');
+      return;
+    }
     
     // Check if DIY Label is enabled for this product (unless show on all products is enabled)
-    const isEnabled = await checkProductSettings(productId);
-    console.log('DIY Label: Enabled check result:', isEnabled);
-    
-    if (!isEnabled) {
-      console.log('DIY Label: Not enabled for this product/page');
-      return;
+    if (!showOnAllProducts) {
+      const isEnabled = await checkProductSettings(productId);
+      if (!isEnabled) {
+        console.log('DIY Label: Not enabled for this product');
+        return;
+      }
     }
     
     // Create and inject the widget
@@ -339,8 +286,7 @@
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeDIYLabel);
   } else {
-    // Small delay to ensure page is fully loaded
-    setTimeout(initializeDIYLabel, 500);
+    initializeDIYLabel();
   }
   
   // Also initialize on page changes (for SPA-like themes)
@@ -349,8 +295,7 @@
     const url = location.href;
     if (url !== lastUrl) {
       lastUrl = url;
-      console.log('DIY Label: Page changed, reinitializing');
-      setTimeout(initializeDIYLabel, 1000); // Longer delay for page changes
+      setTimeout(initializeDIYLabel, 500); // Small delay for page to settle
     }
   }).observe(document, { subtree: true, childList: true });
   
@@ -360,7 +305,7 @@
 
 {% schema %}
 {
-  "name": "DIY Label Global",
+  "name": "DIY Label",
   "settings": [
     {
       "type": "checkbox",

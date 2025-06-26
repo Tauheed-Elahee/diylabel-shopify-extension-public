@@ -7,14 +7,8 @@ type = "theme_app_extension"
 name = "DIY Label"
 handle = "diy-label"
 
-  [[extensions.app_embeds]]
-  name = "DIY Label Global"
-  handle = "diy-label-global"
+[extensions.app_embeds]
 
-  [[extensions.blocks]]
-  name = "DIY Label Widget"
-  handle = "diy-label-widget"
+[extensions.blocks]
 
-  [[extensions.sections]]
-  name = "DIY Label Section"
-  handle = "diy-label-section"
+[extensions.sections]
