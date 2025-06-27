@@ -7,7 +7,6 @@ type = "theme_app_extension"
 name = "DIY Label"
 handle = "diy-label"
 
-[[extensions.blocks]]
+[[extensions.app_embeds]]
 name = "DIY Label App Embed"
 type = "diy-label-app-embed"
-target = "head"
