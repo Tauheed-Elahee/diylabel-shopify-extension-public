@@ -7,7 +7,4 @@ type = "theme_app_extension"
 name = "DIY Label"
 handle = "diy-label"
 
-# App embeds configuration - these appear in theme customizer under "App embeds"
-[[extensions.app_embeds]]
-name = "DIY Label Widget"
-handle = "diy-label-widget"
+# No app_embeds configuration - not supported in theme app extensions
