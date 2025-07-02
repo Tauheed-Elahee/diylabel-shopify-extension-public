@@ -4,26 +4,26 @@
   and loads global JavaScript for the entire site
 {% endcomment %}
 
-{% if app_embed.settings.enabled %}
+{% if block.settings.enabled %}
 <!-- DIY Label Global Configuration -->
 <script>
   console.log('DIY Label: Global app embed loaded');
   
   window.DIYLabelConfig = window.DIYLabelConfig || {};
   window.DIYLabelConfig.global = {
-    enabled: {{ app_embed.settings.enabled | json }},
-    theme: {{ app_embed.settings.theme | default: 'light' | json }},
-    searchRadius: {{ app_embed.settings.search_radius | default: 25 | json }},
-    showOnAllProducts: {{ app_embed.settings.show_on_all_products | default: false | json }},
-    autoInject: {{ app_embed.settings.auto_inject | default: true | json }},
-    apiUrl: {{ app_embed.settings.api_url | default: 'https://increasing-exercise-calculation-yo.trycloudflare.com' | json }},
+    enabled: {{ block.settings.enabled | json }},
+    theme: {{ block.settings.theme | default: 'light' | json }},
+    searchRadius: {{ block.settings.search_radius | default: 25 | json }},
+    showOnAllProducts: {{ block.settings.show_on_all_products | default: false | json }},
+    autoInject: {{ block.settings.auto_inject | default: true | json }},
+    apiUrl: {{ block.settings.api_url | default: 'https://increasing-exercise-calculation-yo.trycloudflare.com' | json }},
     shopDomain: {{ shop.permanent_domain | json }}
   };
   
   console.log('DIY Label Global Config:', window.DIYLabelConfig.global);
 </script>
 
-{% if app_embed.settings.auto_inject %}
+{% if block.settings.auto_inject %}
 <script>
 (function() {
   'use strict';
@@ -263,6 +263,7 @@
 {% schema %}
 {
   "name": "DIY Label Global Settings",
+  "target": "head",
   "settings": [
     {
       "type": "checkbox",
