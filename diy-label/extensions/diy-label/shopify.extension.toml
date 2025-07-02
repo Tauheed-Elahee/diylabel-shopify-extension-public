@@ -7,4 +7,7 @@ type = "theme_app_extension"
 name = "DIY Label"
 handle = "diy-label"
 
-# No app_embeds configuration - not supported in theme app extensions
+# App embed configuration - this makes it appear in Theme Customizer
+[[extensions.app_embeds]]
+name = "DIY Label Global Settings"
+handle = "diy-label-global"
