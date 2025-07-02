@@ -1,299 +1,245 @@
 {% comment %}
   DIY Label App Embed Block
-  This creates an app embed that can be enabled globally in theme customizer
-  Target: "head" makes it available as an app embed
+  Can be added to product sections via theme editor
+  Simplified version focused on product pages
 {% endcomment %}
 
-{% if block.settings.enabled %}
-<!-- DIY Label App Embed: Global JavaScript -->
-<script>
-  console.log('DIY Label App Embed: Loaded and enabled');
+<div class="diy-label-app-embed-block" 
+     style="margin: {{ block.settings.margin }}px 0; 
+            padding: {{ block.settings.padding }}px;
+            {% if block.settings.background_color != blank %}background-color: {{ block.settings.background_color }};{% endif %}
+            {% if block.settings.border_radius > 0 %}border-radius: {{ block.settings.border_radius }}px;{% endif %}
+            {% if block.settings.show_border %}border: 1px solid {{ block.settings.border_color | default: '#e1e1e1' }};{% endif %}">
   
-  window.DIYLabelConfig = window.DIYLabelConfig || {};
-  window.DIYLabelConfig.settings = {
-    enabled: {{ block.settings.enabled | json }},
-    theme: {{ block.settings.theme | default: 'light' | json }},
-    searchRadius: {{ block.settings.search_radius | default: 25 | json }},
-    showOnAllProducts: {{ block.settings.show_on_all_products | default: false | json }},
-    autoInject: {{ block.settings.auto_inject | default: true | json }},
-    apiUrl: {{ block.settings.api_url | default: 'https://increasing-exercise-calculation-yo.trycloudflare.com' | json }},
-    shopDomain: {{ shop.permanent_domain | json }}
-  };
+  {% if block.settings.show_title %}
+    <h3 style="margin: 0 0 16px 0; 
+               color: {{ block.settings.title_color }};
+               font-size: {{ block.settings.title_size }}px;
+               text-align: {{ block.settings.title_alignment }};">
+      {{ block.settings.title | default: "🌱 Choose Local Printing" }}
+    </h3>
+  {% endif %}
   
-  console.log('DIY Label Config:', window.DIYLabelConfig.settings);
-</script>
+  {% if block.settings.show_description %}
+    <p style="margin: 0 0 20px 0; 
+              color: {{ block.settings.description_color }};
+              text-align: {{ block.settings.description_alignment }};">
+      {{ block.settings.description | default: "Support your local community and reduce shipping impact by printing this item at a nearby shop." }}
+    </p>
+  {% endif %}
+  
+  <div id="diy-label-app-embed-block-{{ block.id }}" 
+       data-product-id="{% if product %}{{ product.id }}{% endif %}"
+       data-shop-domain="{{ shop.permanent_domain }}"
+       data-theme="{{ block.settings.theme }}"
+       data-radius="{{ block.settings.search_radius }}"
+       data-api-url="{% if block.settings.api_url != blank %}{{ block.settings.api_url }}{% else %}https://increasing-exercise-calculation-yo.trycloudflare.com{% endif %}"
+       style="min-height: {{ block.settings.widget_height }}px;">
+    
+    <div class="diy-label-loading" style="text-align: center; padding: 40px 20px;">
+      <div style="display: inline-block; 
+                  padding: 12px 24px; 
+                  background: {{ block.settings.loading_bg_color | default: '#f5f5f5' }}; 
+                  border-radius: 6px;">
+        <p style="margin: 0; color: {{ block.settings.loading_text_color | default: '#666666' }};">
+          🌱 Loading local printing options...
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
 (function() {
-  'use strict';
+  const blockId = '{{ block.id }}';
+  const widgetElement = document.getElementById('diy-label-app-embed-block-' + blockId);
   
-  console.log('DIY Label: App embed script starting...');
+  if (!widgetElement) return;
   
-  // Only run on product pages or if show_on_all_products is enabled
-  const isProductPage = window.location.pathname.includes('/products/');
-  const showOnAllProducts = window.DIYLabelConfig.settings.showOnAllProducts;
-  const autoInject = window.DIYLabelConfig.settings.autoInject;
+  const productId = widgetElement.getAttribute('data-product-id');
+  const shopDomain = widgetElement.getAttribute('data-shop-domain');
+  const theme = widgetElement.getAttribute('data-theme');
+  const radius = widgetElement.getAttribute('data-radius');
+  const apiUrl = widgetElement.getAttribute('data-api-url');
   
-  console.log('DIY Label: Page check - isProductPage:', isProductPage, 'showOnAllProducts:', showOnAllProducts, 'autoInject:', autoInject);
-  
-  if (!autoInject || (!isProductPage && !showOnAllProducts)) {
-    console.log('DIY Label: Skipping injection based on settings');
+  // Only proceed if we have a product ID
+  if (!productId) {
+    widgetElement.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;"><p>DIY Label widget is only available on product pages.</p></div>';
     return;
   }
   
-  // Get product ID from page
-  let productId = null;
-  
-  if (isProductPage) {
-    // Try to get product ID from meta tag
-    const productMeta = document.querySelector('meta[property="product:id"]');
-    if (productMeta) {
-      productId = productMeta.getAttribute('content');
-      console.log('DIY Label: Found product ID from meta tag:', productId);
-    }
-    
-    // Fallback: try to get from Shopify global object
-    if (!productId && typeof window.ShopifyAnalytics !== 'undefined' && window.ShopifyAnalytics.meta) {
-      productId = window.ShopifyAnalytics.meta.product?.id;
-      console.log('DIY Label: Found product ID from ShopifyAnalytics:', productId);
-    }
-    
-    // Another fallback: try to get from URL
-    if (!productId) {
-      const pathParts = window.location.pathname.split('/');
-      const productIndex = pathParts.indexOf('products');
-      if (productIndex !== -1 && pathParts[productIndex + 1]) {
-        const productHandle = pathParts[productIndex + 1];
-        productId = productHandle;
-        console.log('DIY Label: Found product handle from URL:', productId);
-      }
-    }
-  }
-  
-  // Function to check if DIY Label is enabled for this product
-  async function checkProductSettings(productId) {
-    if (!productId) return false;
-    
-    try {
-      console.log('DIY Label: Checking product settings for:', productId);
-      const response = await fetch(
-        window.DIYLabelConfig.settings.apiUrl + '/api/product-settings?shop=' + 
-        encodeURIComponent(window.DIYLabelConfig.settings.shopDomain) + 
-        '&product=' + encodeURIComponent(productId)
-      );
-      
-      if (!response.ok) {
-        console.log('DIY Label: Product settings API response not OK:', response.status);
-        return false;
-      }
-      
-      const data = await response.json();
-      console.log('DIY Label: Product settings response:', data);
-      return data.enabled || false;
-    } catch (error) {
-      console.error('DIY Label: Error checking product settings:', error);
-      return false;
-    }
-  }
-  
-  // Function to create and inject the widget
-  function createWidget(productId) {
-    console.log('DIY Label: Creating widget for product:', productId);
-    
-    // Check if widget already exists
-    if (document.getElementById('diy-label-widget-container')) {
-      console.log('DIY Label: Widget already exists, skipping');
-      return;
-    }
-    
-    // Find a good place to inject the widget
-    let targetElement = null;
-    
-    // Try common selectors for product forms
-    const selectors = [
-      '.product-form',
-      '.product__form',
-      '.product-single__form',
-      '[data-product-form]',
-      '.shopify-product-form',
-      '.product-form-container',
-      '.product__info',
-      '.product-info',
-      '.product-details',
-      '.product__content',
-      '.product-content'
-    ];
-    
-    for (const selector of selectors) {
-      targetElement = document.querySelector(selector);
-      if (targetElement) {
-        console.log('DIY Label: Found target element with selector:', selector);
-        break;
-      }
-    }
-    
-    // Fallback: try to find any form with product in the action
-    if (!targetElement) {
-      const forms = document.querySelectorAll('form');
-      for (const form of forms) {
-        if (form.action && form.action.includes('/cart/add')) {
-          targetElement = form.parentElement;
-          console.log('DIY Label: Found target element via cart form');
-          break;
-        }
-      }
-    }
-    
-    // Last resort: append to main content area
-    if (!targetElement) {
-      targetElement = document.querySelector('main') || document.body;
-      console.log('DIY Label: Using fallback target element:', targetElement.tagName);
-    }
-    
-    // Create widget container
-    const widgetContainer = document.createElement('div');
-    widgetContainer.id = 'diy-label-widget-container';
-    widgetContainer.style.cssText = 'margin: 20px 0; padding: 20px; border: 2px solid #007cba; border-radius: 8px; background: ' + 
-      (window.DIYLabelConfig.settings.theme === 'dark' ? '#1a1a1a' : '#f9f9f9') + 
-      '; font-family: system-ui, -apple-system, sans-serif;';
-    
-    // Create widget content
-    widgetContainer.innerHTML = 
-      '<div style="text-align: center; padding: 20px;">' +
-      '<h3 style="margin: 0 0 16px 0; color: #007cba;">🌱 DIY Label Widget Loaded!</h3>' +
-      '<p style="margin: 0 0 16px 0; color: #666;">Product ID: ' + productId + '</p>' +
-      '<div id="diy-label-widget" data-product-id="' + productId + '" data-shop-domain="' + 
-      window.DIYLabelConfig.settings.shopDomain + '" data-theme="' + 
-      window.DIYLabelConfig.settings.theme + '" data-radius="' + 
-      window.DIYLabelConfig.settings.searchRadius + '" style="min-height: 200px; border: 1px dashed #ccc; padding: 20px;">' +
-      '<p>Widget iframe will load here...</p>' +
-      '</div></div>';
-    
-    // Insert widget after the target element
-    if (targetElement.parentNode) {
-      targetElement.parentNode.insertBefore(widgetContainer, targetElement.nextSibling);
-      console.log('DIY Label: Widget inserted after target element');
-    } else {
-      targetElement.appendChild(widgetContainer);
-      console.log('DIY Label: Widget appended to target element');
-    }
-    
-    // Load the widget iframe after a short delay
-    setTimeout(() => loadWidgetIframe(productId), 1000);
-  }
-  
   // Function to load the widget iframe
-  function loadWidgetIframe(productId) {
-    console.log('DIY Label: Loading widget iframe for product:', productId);
-    
-    const widgetElement = document.getElementById('diy-label-widget');
-    if (!widgetElement) {
-      console.error('DIY Label: Widget element not found');
-      return;
-    }
-    
-    // Create iframe
+  function loadWidget() {
     const iframe = document.createElement('iframe');
-    iframe.src = window.DIYLabelConfig.settings.apiUrl + '/widget?' + 
-      'shop=' + encodeURIComponent(window.DIYLabelConfig.settings.shopDomain) + 
+    iframe.src = apiUrl + '/widget?' + 
+      'shop=' + encodeURIComponent(shopDomain) + 
       '&product=' + encodeURIComponent(productId) + 
-      '&theme=' + encodeURIComponent(window.DIYLabelConfig.settings.theme);
+      '&theme=' + encodeURIComponent(theme) + 
+      '&radius=' + encodeURIComponent(radius);
     
-    iframe.style.cssText = 'width: 100%; height: 400px; border: 1px solid #ddd; border-radius: 8px; background: white;';
+    iframe.style.cssText = 'width: 100%; height: {{ block.settings.widget_height }}px; border: none; border-radius: {{ block.settings.border_radius }}px; background: transparent;';
     iframe.frameBorder = '0';
     iframe.loading = 'lazy';
+    iframe.allow = 'geolocation';
     
-    console.log('DIY Label: Iframe src:', iframe.src);
-    
-    // Handle iframe load events
-    iframe.onload = function() {
-      console.log('DIY Label: Iframe loaded successfully');
-    };
-    
-    iframe.onerror = function() {
-      console.error('DIY Label: Iframe failed to load');
-      widgetElement.innerHTML = '<p style="color: red;">Failed to load DIY Label widget</p>';
-    };
+    // Handle iframe messages
+    window.addEventListener('message', function(event) {
+      if (event.origin !== apiUrl) return;
+      
+      if (event.data.type === 'diy-label-resize') {
+        iframe.style.height = Math.max({{ block.settings.widget_height }}, event.data.height) + 'px';
+      }
+      
+      if (event.data.type === 'diy-label-selection') {
+        console.log('DIY Label: Print shop selected:', event.data.printShop);
+        
+        // Dispatch custom event
+        const customEvent = new CustomEvent('diyLabelSelection', {
+          detail: {
+            printShop: event.data.printShop,
+            productId: productId,
+            blockId: blockId
+          }
+        });
+        document.dispatchEvent(customEvent);
+        
+        // Show success message
+        showSuccessMessage(event.data.printShop.name);
+      }
+      
+      if (event.data.type === 'diy-label-error') {
+        console.error('DIY Label: Widget error:', event.data.error);
+        showErrorMessage('Unable to load print shops. Please try again later.');
+      }
+    });
     
     // Replace loading content with iframe
     widgetElement.innerHTML = '';
     widgetElement.appendChild(iframe);
   }
   
-  // Main initialization function
-  async function initializeDIYLabel() {
-    console.log('DIY Label: Initializing...');
+  // Function to show success message
+  function showSuccessMessage(printShopName) {
+    const message = document.createElement('div');
+    message.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 15px 20px; border-radius: 8px; z-index: 9999; font-family: system-ui, -apple-system, sans-serif; box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-width: 300px;';
+    message.innerHTML = '<strong>✅ Print Shop Selected</strong><br>' + printShopName;
     
-    if (!productId) {
-      console.log('DIY Label: No product ID found, skipping widget');
-      return;
-    }
+    document.body.appendChild(message);
     
-    // Check if DIY Label is enabled for this product (unless show on all products is enabled)
-    if (!showOnAllProducts) {
-      const isEnabled = await checkProductSettings(productId);
-      if (!isEnabled) {
-        console.log('DIY Label: Not enabled for this product');
-        return;
+    setTimeout(function() {
+      if (message.parentNode) {
+        message.parentNode.removeChild(message);
       }
-    }
-    
-    // Create and inject the widget
-    createWidget(productId);
+    }, 4000);
   }
   
-  // Initialize when DOM is ready
+  // Function to show error message
+  function showErrorMessage(errorText) {
+    widgetElement.innerHTML = '<div style="text-align: center; padding: 40px 20px; color: #d32f2f;"><h4 style="margin: 0 0 10px 0;">⚠️ Error Loading Widget</h4><p style="margin: 0;">' + errorText + '</p></div>';
+  }
+  
+  // Initialize the widget
+  function initializeWidget() {
+    loadWidget();
+  }
+  
+  // Start initialization
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeDIYLabel);
+    document.addEventListener('DOMContentLoaded', initializeWidget);
   } else {
-    initializeDIYLabel();
+    initializeWidget();
   }
-  
 })();
 </script>
-
-{% else %}
-<!-- DIY Label App Embed: NOT enabled -->
-<script>
-  console.log('DIY Label App Embed: NOT enabled in theme customizer');
-</script>
-{% endif %}
 
 {% schema %}
 {
   "name": "DIY Label App Embed",
-  "target": "head",
+  "target": "section",
   "settings": [
     {
-      "type": "checkbox",
-      "id": "enabled",
-      "label": "Enable DIY Label",
-      "default": true
+      "type": "header",
+      "content": "Content"
     },
     {
       "type": "checkbox",
-      "id": "auto_inject",
-      "label": "Auto-inject on Product Pages",
-      "info": "Automatically add widget to product pages when enabled",
+      "id": "show_title",
+      "label": "Show Title",
       "default": true
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "🌱 Choose Local Printing"
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "label": "Title Size",
+      "min": 14,
+      "max": 32,
+      "step": 2,
+      "default": 20
+    },
+    {
+      "type": "select",
+      "id": "title_alignment",
+      "label": "Title Alignment",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Center" },
+        { "value": "right", "label": "Right" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "color",
+      "id": "title_color",
+      "label": "Title Color",
+      "default": "#333333"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "Show Description",
+      "default": true
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "Support your local community and reduce shipping impact by printing this item at a nearby shop."
+    },
+    {
+      "type": "select",
+      "id": "description_alignment",
+      "label": "Description Alignment",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Center" },
+        { "value": "right", "label": "Right" }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "color",
+      "id": "description_color",
+      "label": "Description Color",
+      "default": "#666666"
+    },
+    {
+      "type": "header",
+      "content": "Widget Settings"
     },
     {
       "type": "select",
       "id": "theme",
       "label": "Widget Theme",
       "options": [
-        {
-          "value": "light",
-          "label": "Light"
-        },
-        {
-          "value": "dark",
-          "label": "Dark"
-        },
-        {
-          "value": "auto",
-          "label": "Auto"
-        }
+        { "value": "light", "label": "Light" },
+        { "value": "dark", "label": "Dark" },
+        { "value": "auto", "label": "Auto" }
       ],
       "default": "light"
     },
@@ -307,18 +253,79 @@
       "default": 25
     },
     {
-      "type": "checkbox",
-      "id": "show_on_all_products",
-      "label": "Show on All Products",
-      "info": "Display widget on all products (otherwise only enabled products)",
-      "default": true
+      "type": "range",
+      "id": "widget_height",
+      "label": "Widget Height (px)",
+      "min": 300,
+      "max": 800,
+      "step": 50,
+      "default": 500
     },
     {
       "type": "url",
       "id": "api_url",
       "label": "API URL",
-      "info": "DIY Label API endpoint",
-      "default": "https://increasing-exercise-calculation-yo.trycloudflare.com"
+      "info": "DIY Label API endpoint"
+    },
+    {
+      "type": "header",
+      "content": "Styling"
+    },
+    {
+      "type": "range",
+      "id": "margin",
+      "label": "Margin (px)",
+      "min": 0,
+      "max": 50,
+      "step": 5,
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "padding",
+      "label": "Padding (px)",
+      "min": 0,
+      "max": 50,
+      "step": 5,
+      "default": 20
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background Color"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_border",
+      "label": "Show Border",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border Color",
+      "default": "#e1e1e1"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "label": "Border Radius (px)",
+      "min": 0,
+      "max": 20,
+      "step": 2,
+      "default": 8
+    },
+    {
+      "type": "color",
+      "id": "loading_bg_color",
+      "label": "Loading Background Color",
+      "default": "#f5f5f5"
+    },
+    {
+      "type": "color",
+      "id": "loading_text_color",
+      "label": "Loading Text Color",
+      "default": "#666666"
     }
   ]
 }

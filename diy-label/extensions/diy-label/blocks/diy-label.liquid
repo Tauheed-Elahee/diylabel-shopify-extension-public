@@ -33,7 +33,7 @@
        data-shop-domain="{{ shop.permanent_domain }}"
        data-theme="{{ block.settings.theme }}"
        data-radius="{{ block.settings.search_radius }}"
-       data-api-url="{{ block.settings.api_url | default: 'https://increasing-exercise-calculation-yo.trycloudflare.com' }}"
+       data-api-url="{% if block.settings.api_url != blank %}{{ block.settings.api_url }}{% else %}https://increasing-exercise-calculation-yo.trycloudflare.com{% endif %}"
        style="min-height: {{ block.settings.widget_height }}px;">
     
     <div class="diy-label-loading" style="text-align: center; padding: 40px 20px;">
@@ -263,8 +263,7 @@
       "type": "url",
       "id": "api_url",
       "label": "API URL",
-      "info": "DIY Label API endpoint",
-      "default": "https://increasing-exercise-calculation-yo.trycloudflare.com"
+      "info": "DIY Label API endpoint"
     },
     {
       "type": "header",

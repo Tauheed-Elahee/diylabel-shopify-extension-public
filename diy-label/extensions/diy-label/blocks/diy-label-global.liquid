@@ -16,9 +16,14 @@
     searchRadius: {{ block.settings.search_radius | default: 25 | json }},
     showOnAllProducts: {{ block.settings.show_on_all_products | default: false | json }},
     autoInject: {{ block.settings.auto_inject | default: true | json }},
-    apiUrl: {{ block.settings.api_url | default: 'https://increasing-exercise-calculation-yo.trycloudflare.com' | json }},
+    apiUrl: {{ block.settings.api_url | default: '' | json }},
     shopDomain: {{ shop.permanent_domain | json }}
   };
+  
+  // Set default API URL if not configured
+  if (!window.DIYLabelConfig.global.apiUrl) {
+    window.DIYLabelConfig.global.apiUrl = 'https://increasing-exercise-calculation-yo.trycloudflare.com';
+  }
   
   console.log('DIY Label Global Config:', window.DIYLabelConfig.global);
 </script>
@@ -320,8 +325,7 @@
       "type": "url",
       "id": "api_url",
       "label": "API URL",
-      "info": "DIY Label API endpoint (leave blank for auto-detection)",
-      "default": "https://increasing-exercise-calculation-yo.trycloudflare.com"
+      "info": "DIY Label API endpoint (configure in theme customizer)"
     }
   ]
 }
