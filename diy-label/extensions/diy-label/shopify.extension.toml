@@ -6,8 +6,3 @@ api_version = "2025-04"
 type = "theme_app_extension"
 name = "DIY Label"
 handle = "diy-label"
-
-# App embed configuration - this makes it appear in Theme Customizer
-[[extensions.app_embeds]]
-name = "DIY Label Global Settings"
-handle = "diy-label-global"
