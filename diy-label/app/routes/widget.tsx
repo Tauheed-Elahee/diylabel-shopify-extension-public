@@ -97,6 +97,53 @@ export default function Widget() {
             width: 100%;
             height: 100%;
           }
+
+          .location-error {
+            background: #fee8e8;
+            border: 1px solid #fcc;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+            color: #d32f2f;
+          }
+
+          .location-fallback {
+            background: #e8f5e8;
+            border: 1px solid #cce;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+            color: #2e7d32;
+          }
+
+          .manual-location {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin: 10px 0;
+          }
+
+          .manual-location input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+          }
+
+          .manual-location button {
+            padding: 8px 16px;
+            background: #007cba;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+          }
+
+          .manual-location button:hover {
+            background: #005a8b;
+          }
         `
       }} />
 
@@ -157,6 +204,51 @@ export default function Widget() {
             </button>
           </div>
 
+          <div id="location-error" style={{ display: 'none' }}>
+            <div className="location-error">
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>📍 Location Access Needed</h4>
+              <p style={{ margin: '0 0 15px 0', fontSize: '14px' }}>
+                We need your location to find nearby print shops. This might not work in embedded mode.
+              </p>
+              <div className="location-fallback">
+                <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '600' }}>
+                  🔧 Try these options:
+                </p>
+                <div className="manual-location">
+                  <input 
+                    type="text" 
+                    id="manual-location-input" 
+                    placeholder="Enter your city or zip code"
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      border: '1px solid #ddd',
+                      borderRadius: '4px',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <button 
+                    id="search-by-location"
+                    style={{
+                      padding: '8px 16px',
+                      background: '#007cba',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    Search
+                  </button>
+                </div>
+                <p style={{ margin: '10px 0 0 0', fontSize: '12px', color: '#666' }}>
+                  Or <a href="#" id="open-in-new-tab" style={{ color: '#007cba', textDecoration: 'underline' }}>open in new tab</a> for full functionality
+                </p>
+              </div>
+            </div>
+          </div>
+
           <div id="map-container" style={{ 
             width: '100%', 
             height: '400px', 
@@ -206,7 +298,7 @@ export default function Widget() {
       <script
         dangerouslySetInnerHTML={{
           __html: `
-            // DIY Label Widget Implementation
+            // DIY Label Widget Implementation with Enhanced Location Handling
             (function() {
               const widget = document.getElementById('diy-label-widget');
               const config = JSON.parse(widget.dataset.config);
@@ -220,9 +312,13 @@ export default function Widget() {
               // DOM elements
               const findBtn = document.getElementById('find-shops-btn');
               const locationStatus = document.getElementById('location-status');
+              const locationError = document.getElementById('location-error');
               const mapContainer = document.getElementById('map-container');
               const shopsList = document.getElementById('shops-list');
               const shopsContainer = document.getElementById('shops-container');
+              const manualLocationInput = document.getElementById('manual-location-input');
+              const searchByLocationBtn = document.getElementById('search-by-location');
+              const openInNewTabLink = document.getElementById('open-in-new-tab');
 
               // Update status message
               function updateStatus(message, isLoading = false) {
@@ -230,31 +326,96 @@ export default function Widget() {
                   (isLoading ? '⏳ ' : '📍 ') + message + '</p>';
               }
 
-              // Get user's location
+              // Show location error with fallback options
+              function showLocationError(errorMessage) {
+                updateStatus('Location access failed', false);
+                locationError.style.display = 'block';
+                console.log('Location error:', errorMessage);
+              }
+
+              // Hide location error
+              function hideLocationError() {
+                locationError.style.display = 'none';
+              }
+
+              // Geocode address using Mapbox
+              async function geocodeAddress(address) {
+                if (!config.mapboxToken) {
+                  throw new Error('Mapbox token not configured');
+                }
+
+                try {
+                  const response = await fetch(
+                    'https://api.mapbox.com/geocoding/v5/mapbox.places/' + 
+                    encodeURIComponent(address) + 
+                    '.json?access_token=' + config.mapboxToken + 
+                    '&country=US,CA&types=place,postcode,locality'
+                  );
+                  
+                  if (!response.ok) {
+                    throw new Error('Geocoding failed');
+                  }
+                  
+                  const data = await response.json();
+                  
+                  if (data.features && data.features.length > 0) {
+                    const [lng, lat] = data.features[0].center;
+                    return { lat, lng };
+                  } else {
+                    throw new Error('Location not found');
+                  }
+                } catch (error) {
+                  console.error('Geocoding error:', error);
+                  throw error;
+                }
+              }
+
+              // Get user's location with enhanced error handling
               function getUserLocation() {
                 return new Promise((resolve, reject) => {
+                  // Check if geolocation is supported
                   if (!navigator.geolocation) {
-                    reject(new Error('Geolocation is not supported'));
+                    reject(new Error('Geolocation is not supported by this browser'));
                     return;
                   }
 
                   updateStatus('Getting your location...', true);
                   
+                  // Set a shorter timeout for iframe context
+                  const options = {
+                    enableHighAccuracy: true,
+                    timeout: 8000, // Shorter timeout
+                    maximumAge: 300000 // 5 minutes
+                  };
+
                   navigator.geolocation.getCurrentPosition(
                     (position) => {
+                      hideLocationError();
                       resolve({
                         lat: position.coords.latitude,
                         lng: position.coords.longitude
                       });
                     },
                     (error) => {
-                      reject(error);
+                      console.error('Geolocation error:', error);
+                      let errorMessage = 'Location access failed';
+                      
+                      switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                          errorMessage = 'Location access denied by user';
+                          break;
+                        case error.POSITION_UNAVAILABLE:
+                          errorMessage = 'Location information unavailable';
+                          break;
+                        case error.TIMEOUT:
+                          errorMessage = 'Location request timed out';
+                          break;
+                      }
+                      
+                      showLocationError(errorMessage);
+                      reject(new Error(errorMessage));
                     },
-                    {
-                      enableHighAccuracy: true,
-                      timeout: 10000,
-                      maximumAge: 300000 // 5 minutes
-                    }
+                    options
                   );
                 });
               }
@@ -394,10 +555,13 @@ export default function Widget() {
                 const shop = printShops[index];
                 updateStatus('Selected: ' + shop.name);
                 
-                // Here you would typically:
-                // 1. Store the selection in localStorage or send to server
-                // 2. Update the product page to show the selected print shop
-                // 3. Modify the cart/checkout process
+                // Send message to parent window
+                if (window.parent !== window) {
+                  window.parent.postMessage({
+                    type: 'diy-label-selection',
+                    printShop: shop
+                  }, '*');
+                }
                 
                 alert('Print shop selected: ' + shop.name + '\\n\\nThis would normally integrate with your checkout process to route the order to this local print shop.');
               };
@@ -407,6 +571,7 @@ export default function Widget() {
                 try {
                   findBtn.disabled = true;
                   findBtn.textContent = 'Finding...';
+                  hideLocationError();
                   
                   // Get user location
                   userLocation = await getUserLocation();
@@ -432,15 +597,80 @@ export default function Widget() {
                   
                 } catch (error) {
                   console.error('Error finding print shops:', error);
-                  updateStatus('Unable to find your location. Please enable location services and try again.');
+                  // Error is already shown by showLocationError
                 } finally {
                   findBtn.disabled = false;
                   findBtn.textContent = 'Find Print Shops Near Me';
                 }
               }
 
+              // Search by manual location
+              async function searchByManualLocation() {
+                const address = manualLocationInput.value.trim();
+                if (!address) {
+                  alert('Please enter a city or zip code');
+                  return;
+                }
+
+                try {
+                  searchByLocationBtn.disabled = true;
+                  searchByLocationBtn.textContent = 'Searching...';
+                  hideLocationError();
+                  
+                  updateStatus('Finding location: ' + address, true);
+                  
+                  // Geocode the address
+                  userLocation = await geocodeAddress(address);
+                  
+                  // Fetch nearby print shops
+                  printShops = await fetchPrintShops(userLocation.lat, userLocation.lng);
+                  
+                  // Show map container first
+                  mapContainer.style.display = 'block';
+                  
+                  // Wait a bit for container to be visible, then initialize map
+                  setTimeout(() => {
+                    initMap(userLocation.lat, userLocation.lng);
+                    
+                    // Wait for map to load, then add markers
+                    setTimeout(() => {
+                      addPrintShopMarkers(printShops);
+                      displayPrintShops(printShops);
+                    }, 1000);
+                  }, 100);
+                  
+                  updateStatus('Found ' + printShops.length + ' print shops near ' + address);
+                  
+                } catch (error) {
+                  console.error('Error searching by location:', error);
+                  updateStatus('Could not find location: ' + address);
+                  alert('Could not find that location. Please try a different city or zip code.');
+                } finally {
+                  searchByLocationBtn.disabled = false;
+                  searchByLocationBtn.textContent = 'Search';
+                }
+              }
+
+              // Open widget in new tab
+              function openInNewTab() {
+                const currentUrl = window.location.href;
+                window.open(currentUrl, '_blank');
+              }
+
               // Event listeners
               findBtn.addEventListener('click', findPrintShops);
+              searchByLocationBtn.addEventListener('click', searchByManualLocation);
+              openInNewTabLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                openInNewTab();
+              });
+
+              // Allow Enter key in manual location input
+              manualLocationInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                  searchByManualLocation();
+                }
+              });
 
               console.log('DIY Label Widget initialized for shop:', widget.dataset.shop);
               console.log('Product ID:', widget.dataset.product);
