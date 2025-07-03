@@ -22,7 +22,7 @@
   
   // Set default API URL if not configured
   if (!window.DIYLabelConfig.global.apiUrl) {
-    window.DIYLabelConfig.global.apiUrl = 'https://increasing-exercise-calculation-yo.trycloudflare.com';
+    window.DIYLabelConfig.global.apiUrl = 'https://spirits-plumbing-definitions-obituaries.trycloudflare.com';
   }
   
   console.log('DIY Label Global Config:', window.DIYLabelConfig.global);
@@ -46,31 +46,87 @@
     return;
   }
   
-  // Get product ID from page
+  // Get product ID from page - try multiple methods
   let productId = null;
   
   if (isProductPage) {
-    // Try to get product ID from meta tag
+    // Method 1: Try to get product ID from meta tag
     const productMeta = document.querySelector('meta[property="product:id"]');
     if (productMeta) {
       productId = productMeta.getAttribute('content');
       console.log('DIY Label: Found product ID from meta tag:', productId);
     }
     
-    // Fallback: try to get from Shopify global object
+    // Method 2: Try to get from Shopify global object
     if (!productId && typeof window.ShopifyAnalytics !== 'undefined' && window.ShopifyAnalytics.meta) {
       productId = window.ShopifyAnalytics.meta.product?.id;
       console.log('DIY Label: Found product ID from ShopifyAnalytics:', productId);
     }
     
-    // Another fallback: try to get from URL
+    // Method 3: Try to get from window.meta (common in themes)
+    if (!productId && typeof window.meta !== 'undefined' && window.meta.product) {
+      productId = window.meta.product.id;
+      console.log('DIY Label: Found product ID from window.meta:', productId);
+    }
+    
+    // Method 4: Try to get from theme-specific global variables
+    if (!productId && typeof window.theme !== 'undefined' && window.theme.product) {
+      productId = window.theme.product.id;
+      console.log('DIY Label: Found product ID from window.theme:', productId);
+    }
+    
+    // Method 5: Try to get from data attributes on product form
+    if (!productId) {
+      const productForm = document.querySelector('form[action*="/cart/add"]');
+      if (productForm) {
+        const productIdInput = productForm.querySelector('input[name="id"]');
+        if (productIdInput) {
+          productId = productIdInput.value;
+          console.log('DIY Label: Found product ID from form input:', productId);
+        }
+      }
+    }
+    
+    // Method 6: Try to get from JSON-LD structured data
+    if (!productId) {
+      const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
+      for (const script of jsonLdScripts) {
+        try {
+          const data = JSON.parse(script.textContent);
+          if (data['@type'] === 'Product' && data.productID) {
+            productId = data.productID;
+            console.log('DIY Label: Found product ID from JSON-LD:', productId);
+            break;
+          }
+        } catch (e) {
+          // Ignore JSON parse errors
+        }
+      }
+    }
+    
+    // Method 7: Last resort - try to extract from URL and convert handle to ID
     if (!productId) {
       const pathParts = window.location.pathname.split('/');
       const productIndex = pathParts.indexOf('products');
       if (productIndex !== -1 && pathParts[productIndex + 1]) {
         const productHandle = pathParts[productIndex + 1];
-        productId = productHandle;
-        console.log('DIY Label: Found product handle from URL:', productId);
+        console.log('DIY Label: Found product handle from URL:', productHandle);
+        
+        // Try to find product ID from handle using theme data
+        if (typeof window.theme !== 'undefined' && window.theme.products) {
+          const product = window.theme.products.find(p => p.handle === productHandle);
+          if (product) {
+            productId = product.id;
+            console.log('DIY Label: Converted handle to ID using theme data:', productId);
+          }
+        }
+        
+        // If we still don't have an ID, use the handle as fallback
+        // The API will need to handle handle-to-ID conversion
+        if (!productId) {
+          productId = productHandle;
+          console.log('DIY Label: Using product handle as fallback:', productId);
+        }
       }
     }
   }

@@ -8,8 +8,19 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const shopDomain = url.searchParams.get('shop');
   const productId = url.searchParams.get('product');
 
+  // CORS headers for cross-origin requests from Shopify stores
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400',
+  };
+
   if (!shopDomain) {
-    throw new Response('Shop domain is required', { status: 400 });
+    throw new Response('Shop domain is required', { 
+      status: 400,
+      headers: corsHeaders
+    });
   }
 
   // Get store settings
@@ -20,7 +31,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     .single();
 
   if (!store) {
-    throw new Response('Store not found', { status: 404 });
+    throw new Response('Store not found', { 
+      status: 404,
+      headers: corsHeaders
+    });
   }
 
   // Get product settings if productId is provided
@@ -44,6 +58,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       supabaseUrl: process.env.VITE_SUPABASE_URL,
       supabaseAnonKey: process.env.VITE_SUPABASE_ANON_KEY
     }
+  }, {
+    headers: corsHeaders
   });
 };
 
