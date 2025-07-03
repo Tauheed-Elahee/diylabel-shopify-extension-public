@@ -5,7 +5,7 @@ import { supabaseAdmin } from "../lib/supabase.server";
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const shopDomain = url.searchParams.get('shop');
-  const productId = url.searchParams.get('product');
+  const productIdentifier = url.searchParams.get('product'); // Could be ID or handle
 
   // CORS headers for cross-origin requests from Shopify stores
   const corsHeaders = {
@@ -15,8 +15,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     'Access-Control-Max-Age': '86400',
   };
 
-  if (!shopDomain || !productId) {
-    return json({ error: 'Missing shop domain or product ID' }, { 
+  if (!shopDomain || !productIdentifier) {
+    return json({ error: 'Missing shop domain or product identifier' }, { 
       status: 400,
       headers: corsHeaders
     });
@@ -26,7 +26,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     // Get store
     const { data: store, error: storeError } = await supabaseAdmin
       .from('shopify_stores')
-      .select('id')
+      .select('*')
       .eq('shop_domain', shopDomain)
       .single();
 
@@ -36,23 +36,65 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       });
     }
 
-    // Check if productId is a handle (contains non-numeric characters) or an ID
-    const isHandle = isNaN(Number(productId)) || productId.includes('-');
+    // Check if productIdentifier is a handle (contains non-numeric characters) or an ID
+    const isHandle = isNaN(Number(productIdentifier)) || productIdentifier.includes('-');
+    let productId = productIdentifier;
     
-    console.log('Product settings check:', { productId, isHandle, shopDomain });
+    console.log('Product settings check:', { productIdentifier, isHandle, shopDomain });
 
     if (isHandle) {
-      // If it's a handle, we need to convert it to an ID using Shopify API
-      // For now, we'll return enabled: false for handles since we can't easily convert them
-      // In a real implementation, you'd use the Shopify Admin API to convert handle to ID
-      console.log('Product ID appears to be a handle, cannot check settings without conversion');
-      return json({ 
-        enabled: false, 
-        error: 'Product handle provided instead of ID',
-        note: 'DIY Label requires product ID, not handle'
-      }, {
-        headers: corsHeaders
-      });
+      // Convert handle to ID using Shopify Admin API
+      try {
+        console.log('Converting product handle to ID:', productIdentifier);
+        
+        // Create Shopify Admin API client
+        const shopifyApiUrl = `https://${shopDomain}/admin/api/2023-10/products.json?handle=${productIdentifier}&fields=id`;
+        
+        const response = await fetch(shopifyApiUrl, {
+          headers: {
+            'X-Shopify-Access-Token': store.access_token,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          console.error('Shopify API error:', response.status, response.statusText);
+          return json({ 
+            enabled: false, 
+            error: 'Failed to fetch product from Shopify API',
+            details: `HTTP ${response.status}`
+          }, {
+            headers: corsHeaders
+          });
+        }
+
+        const data = await response.json();
+        
+        if (!data.products || data.products.length === 0) {
+          console.log('Product not found with handle:', productIdentifier);
+          return json({ 
+            enabled: false, 
+            error: 'Product not found',
+            note: `No product found with handle: ${productIdentifier}`
+          }, {
+            headers: corsHeaders
+          });
+        }
+
+        // Extract the numeric ID from the Shopify response
+        productId = data.products[0].id.toString();
+        console.log('Successfully converted handle to ID:', { handle: productIdentifier, id: productId });
+
+      } catch (error) {
+        console.error('Error converting handle to ID:', error);
+        return json({ 
+          enabled: false, 
+          error: 'Failed to convert product handle to ID',
+          details: error instanceof Error ? error.message : 'Unknown error'
+        }, {
+          headers: corsHeaders
+        });
+      }
     }
 
     // Get product settings using the numeric product ID
@@ -71,11 +113,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     }
 
     // Return settings or default values
-    return json({
+    const result = {
       enabled: productSettings?.diy_label_enabled || false,
       allowReusedApparel: productSettings?.allow_reused_apparel || false,
-      settings: productSettings?.settings || {}
-    }, {
+      settings: productSettings?.settings || {},
+      productId: productId, // Include the resolved product ID
+      originalIdentifier: productIdentifier,
+      wasConverted: isHandle
+    };
+
+    console.log('Product settings result:', result);
+
+    return json(result, {
       headers: corsHeaders
     });
 
@@ -83,7 +132,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     console.error('Error in product-settings API:', error);
     return json({ 
       enabled: false, 
-      error: 'Failed to fetch product settings' 
+      error: 'Failed to fetch product settings',
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { 
       status: 500,
       headers: corsHeaders

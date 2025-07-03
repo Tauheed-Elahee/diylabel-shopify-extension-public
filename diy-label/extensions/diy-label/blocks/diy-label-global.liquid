@@ -46,56 +46,56 @@
     return;
   }
   
-  // Get product ID from page - try multiple methods
-  let productId = null;
+  // Get product identifier from page - try multiple methods
+  let productIdentifier = null;
   
   if (isProductPage) {
     // Method 1: Try to get product ID from meta tag
     const productMeta = document.querySelector('meta[property="product:id"]');
     if (productMeta) {
-      productId = productMeta.getAttribute('content');
-      console.log('DIY Label: Found product ID from meta tag:', productId);
+      productIdentifier = productMeta.getAttribute('content');
+      console.log('DIY Label: Found product ID from meta tag:', productIdentifier);
     }
     
     // Method 2: Try to get from Shopify global object
-    if (!productId && typeof window.ShopifyAnalytics !== 'undefined' && window.ShopifyAnalytics.meta) {
-      productId = window.ShopifyAnalytics.meta.product?.id;
-      console.log('DIY Label: Found product ID from ShopifyAnalytics:', productId);
+    if (!productIdentifier && typeof window.ShopifyAnalytics !== 'undefined' && window.ShopifyAnalytics.meta) {
+      productIdentifier = window.ShopifyAnalytics.meta.product?.id;
+      console.log('DIY Label: Found product ID from ShopifyAnalytics:', productIdentifier);
     }
     
     // Method 3: Try to get from window.meta (common in themes)
-    if (!productId && typeof window.meta !== 'undefined' && window.meta.product) {
-      productId = window.meta.product.id;
-      console.log('DIY Label: Found product ID from window.meta:', productId);
+    if (!productIdentifier && typeof window.meta !== 'undefined' && window.meta.product) {
+      productIdentifier = window.meta.product.id;
+      console.log('DIY Label: Found product ID from window.meta:', productIdentifier);
     }
     
     // Method 4: Try to get from theme-specific global variables
-    if (!productId && typeof window.theme !== 'undefined' && window.theme.product) {
-      productId = window.theme.product.id;
-      console.log('DIY Label: Found product ID from window.theme:', productId);
+    if (!productIdentifier && typeof window.theme !== 'undefined' && window.theme.product) {
+      productIdentifier = window.theme.product.id;
+      console.log('DIY Label: Found product ID from window.theme:', productIdentifier);
     }
     
     // Method 5: Try to get from data attributes on product form
-    if (!productId) {
+    if (!productIdentifier) {
       const productForm = document.querySelector('form[action*="/cart/add"]');
       if (productForm) {
         const productIdInput = productForm.querySelector('input[name="id"]');
         if (productIdInput) {
-          productId = productIdInput.value;
-          console.log('DIY Label: Found product ID from form input:', productId);
+          productIdentifier = productIdInput.value;
+          console.log('DIY Label: Found product ID from form input:', productIdentifier);
         }
       }
     }
     
     // Method 6: Try to get from JSON-LD structured data
-    if (!productId) {
+    if (!productIdentifier) {
       const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
       for (const script of jsonLdScripts) {
         try {
           const data = JSON.parse(script.textContent);
           if (data['@type'] === 'Product' && data.productID) {
-            productId = data.productID;
-            console.log('DIY Label: Found product ID from JSON-LD:', productId);
+            productIdentifier = data.productID;
+            console.log('DIY Label: Found product ID from JSON-LD:', productIdentifier);
             break;
           }
         } catch (e) {
@@ -104,8 +104,8 @@
       }
     }
     
-    // Method 7: Last resort - try to extract from URL and convert handle to ID
-    if (!productId) {
+    // Method 7: Extract handle from URL as fallback (API will convert to ID)
+    if (!productIdentifier) {
       const pathParts = window.location.pathname.split('/');
       const productIndex = pathParts.indexOf('products');
       if (productIndex !== -1 && pathParts[productIndex + 1]) {
@@ -116,34 +116,33 @@
         if (typeof window.theme !== 'undefined' && window.theme.products) {
           const product = window.theme.products.find(p => p.handle === productHandle);
           if (product) {
-            productId = product.id;
-            console.log('DIY Label: Converted handle to ID using theme data:', productId);
+            productIdentifier = product.id;
+            console.log('DIY Label: Converted handle to ID using theme data:', productIdentifier);
           }
         }
         
-        // If we still don't have an ID, use the handle as fallback
-        // The API will need to handle handle-to-ID conversion
-        if (!productId) {
-          productId = productHandle;
-          console.log('DIY Label: Using product handle as fallback:', productId);
+        // If we still don't have an ID, use the handle - the API will convert it
+        if (!productIdentifier) {
+          productIdentifier = productHandle;
+          console.log('DIY Label: Using product handle (API will convert to ID):', productIdentifier);
         }
       }
     }
   }
   
   // Function to check if DIY Label is enabled for this product
-  async function checkProductSettings(productId) {
-    if (!productId) {
-      console.log('DIY Label: No product ID provided to checkProductSettings');
+  async function checkProductSettings(productIdentifier) {
+    if (!productIdentifier) {
+      console.log('DIY Label: No product identifier provided to checkProductSettings');
       return false;
     }
     
     try {
-      console.log('DIY Label: Checking product settings for:', productId);
+      console.log('DIY Label: Checking product settings for:', productIdentifier);
       const response = await fetch(
         window.DIYLabelConfig.global.apiUrl + '/api/product-settings?shop=' + 
         encodeURIComponent(window.DIYLabelConfig.global.shopDomain) + 
-        '&product=' + encodeURIComponent(productId)
+        '&product=' + encodeURIComponent(productIdentifier)
       );
       
       if (!response.ok) {
@@ -161,8 +160,8 @@
   }
   
   // Function to create and inject the widget
-  function createWidget(productId) {
-    console.log('DIY Label: Creating widget for product:', productId);
+  function createWidget(productIdentifier) {
+    console.log('DIY Label: Creating widget for product:', productIdentifier);
     
     // Check if widget already exists
     if (document.getElementById('diy-label-auto-widget-container')) {
@@ -226,7 +225,7 @@
       '<div style="text-align: center; padding: 20px;">' +
       '<h3 style="margin: 0 0 16px 0; color: #007cba;">🌱 Choose Local Printing</h3>' +
       '<p style="margin: 0 0 16px 0; color: #666;">Support your local community and reduce shipping impact.</p>' +
-      '<div id="diy-label-auto-widget" data-product-id="' + productId + '" data-shop-domain="' + 
+      '<div id="diy-label-auto-widget" data-product-id="' + productIdentifier + '" data-shop-domain="' + 
       window.DIYLabelConfig.global.shopDomain + '" data-theme="' + 
       window.DIYLabelConfig.global.theme + '" data-radius="' + 
       window.DIYLabelConfig.global.searchRadius + '" style="min-height: 200px; border: 1px dashed #ccc; padding: 20px;">' +
@@ -243,12 +242,12 @@
     }
     
     // Load the widget iframe after a short delay
-    setTimeout(() => loadWidgetIframe(productId), 1000);
+    setTimeout(() => loadWidgetIframe(productIdentifier), 1000);
   }
   
   // Function to load the widget iframe
-  function loadWidgetIframe(productId) {
-    console.log('DIY Label: Loading widget iframe for product:', productId);
+  function loadWidgetIframe(productIdentifier) {
+    console.log('DIY Label: Loading widget iframe for product:', productIdentifier);
     
     const widgetElement = document.getElementById('diy-label-auto-widget');
     if (!widgetElement) {
@@ -260,7 +259,7 @@
     const iframe = document.createElement('iframe');
     iframe.src = window.DIYLabelConfig.global.apiUrl + '/widget?' + 
       'shop=' + encodeURIComponent(window.DIYLabelConfig.global.shopDomain) + 
-      '&product=' + encodeURIComponent(productId) + 
+      '&product=' + encodeURIComponent(productIdentifier) + 
       '&theme=' + encodeURIComponent(window.DIYLabelConfig.global.theme);
     
     iframe.style.cssText = 'width: 100%; height: 400px; border: 1px solid #ddd; border-radius: 8px; background: white;';
@@ -288,15 +287,15 @@
   async function initializeDIYLabel() {
     console.log('DIY Label: Initializing auto-injection...');
     
-    if (!productId) {
-      console.log('DIY Label: No product ID found, skipping widget');
+    if (!productIdentifier) {
+      console.log('DIY Label: No product identifier found, skipping widget');
       return;
     }
     
     // Check if DIY Label is enabled for this product (unless show on all products is enabled)
     if (!showOnAllProducts) {
-      console.log('DIY Label: Checking if enabled for specific product:', productId);
-      const isEnabled = await checkProductSettings(productId);
+      console.log('DIY Label: Checking if enabled for specific product:', productIdentifier);
+      const isEnabled = await checkProductSettings(productIdentifier);
       console.log('DIY Label: Product enabled check result:', isEnabled);
       if (!isEnabled) {
         console.log('DIY Label: Not enabled for this product, skipping widget');
@@ -307,8 +306,8 @@
     }
     
     // Create and inject the widget
-    console.log('DIY Label: Creating widget for product:', productId);
-    createWidget(productId);
+    console.log('DIY Label: Creating widget for product:', productIdentifier);
+    createWidget(productIdentifier);
   }
   
   // Initialize when DOM is ready
