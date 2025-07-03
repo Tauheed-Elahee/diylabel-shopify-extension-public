@@ -77,7 +77,10 @@
   
   // Function to check if DIY Label is enabled for this product
   async function checkProductSettings(productId) {
-    if (!productId) return false;
+    if (!productId) {
+      console.log('DIY Label: No product ID provided to checkProductSettings');
+      return false;
+    }
     
     try {
       console.log('DIY Label: Checking product settings for:', productId);
@@ -236,14 +239,19 @@
     
     // Check if DIY Label is enabled for this product (unless show on all products is enabled)
     if (!showOnAllProducts) {
+      console.log('DIY Label: Checking if enabled for specific product:', productId);
       const isEnabled = await checkProductSettings(productId);
+      console.log('DIY Label: Product enabled check result:', isEnabled);
       if (!isEnabled) {
-        console.log('DIY Label: Not enabled for this product');
+        console.log('DIY Label: Not enabled for this product, skipping widget');
         return;
       }
+    } else {
+      console.log('DIY Label: Show on all products is enabled, skipping product check');
     }
     
     // Create and inject the widget
+    console.log('DIY Label: Creating widget for product:', productId);
     createWidget(productId);
   }
   
