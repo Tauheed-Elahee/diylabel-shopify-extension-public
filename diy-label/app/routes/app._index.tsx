@@ -135,6 +135,31 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
   } catch (error) {
     console.error('Loader error:', error);
+    
+    // More detailed error logging
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+    }
+    
+    // Check if it's a Shopify authentication error
+    if (error instanceof Error && error.message.includes('401')) {
+      throw new Error('Shopify authentication failed. Please reinstall the app.');
+    }
+    
+    // Check if it's a database connection error
+    if (error instanceof Error && (error.message.includes('ECONNREFUSED') || error.message.includes('database'))) {
+      throw new Error('Database connection failed. Please check your Supabase configuration.');
+    }
+    
+    // Check if it's a GraphQL error
+    if (error instanceof Error && error.message.includes('GraphQL')) {
+      throw new Error('Shopify API error. Please check your app permissions and try again.');
+    }
+    
     throw new Error(`Failed to load dashboard data: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
