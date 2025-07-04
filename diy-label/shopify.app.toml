@@ -1,6 +1,6 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-client_id = "YOUR_CLIENT_ID_FROM_PARTNERS_DASHBOARD"
+client_id = "YOUR_ACTUAL_CLIENT_ID_HERE"
 name = "diy-label"
 handle = "diy-label"
 application_url = "https://spirits-plumbing-definitions-obituaries.trycloudflare.com"
