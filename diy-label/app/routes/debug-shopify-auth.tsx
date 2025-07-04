@@ -57,6 +57,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       responseHeaders[key] = value;
     });
 
+    // Additional token analysis
+    const tokenAnalysis = {
+      fullToken: store.access_token,
+      tokenLength: store.access_token?.length || 0,
+      tokenPrefix: store.access_token?.substring(0, 6) || 'No token',
+      tokenSuffix: store.access_token?.substring(-4) || 'No token',
+      isValidFormat: /^(shpat_|shpca_|shpss_)/.test(store.access_token || ''),
+      createdAt: store.created_at,
+      updatedAt: store.updated_at
+    };
+
     // Test product API specifically
     let productTestResult = null;
     if (response.ok) {
@@ -95,7 +106,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         active: store.active,
         created_at: store.created_at,
         access_token_preview: store.access_token ? store.access_token.substring(0, 10) + '...' : 'No token',
-        token_info: tokenInfo
+        token_info: tokenInfo,
+        token_analysis: tokenAnalysis
       },
       shopifyApiTest: {
         url: shopifyApiUrl,
