@@ -733,84 +733,71 @@ export default function Widget() {
                 const shop = printShops[index];
                 updateStatus('Selected: ' + shop.name);
                 
-                // Create actual order instead of just showing alert
-                createDIYLabelOrder(shop);
+                // Store selection in Shopify cart attributes
+                updateShopifyCart(shop);
               };
               
-              // Function to create DIY Label order
-              async function createDIYLabelOrder(printShop) {
+              // Function to update Shopify cart with DIY Label selection
+              async function updateShopifyCart(printShop) {
                 try {
-                  updateStatus('Creating order with ' + printShop.name + '...', true);
+                  updateStatus('Saving selection to cart...', true);
                   
-                  // Get product ID from URL or widget data
                   const urlParams = new URLSearchParams(window.location.search);
                   const productId = urlParams.get('product');
                   const shopDomain = urlParams.get('shop');
                   
-                  if (!productId || !shopDomain) {
-                    throw new Error('Missing product ID or shop domain');
-                  }
-                  
-                  // Create order data
-                  const orderData = {
-                    shopifyOrderId: 'widget-order-' + Date.now(),
-                    shopDomain: shopDomain,
-                    printShopId: printShop.id,
-                    productData: {
-                      title: 'Product from Widget',
-                      product_id: productId,
-                      total: 25.00 // This would come from the actual product
-                    },
-                    customerData: {
-                      name: 'Widget Customer',
-                      email: 'customer@example.com'
-                      // In a real implementation, this would come from the checkout
-                    },
-                    options: {
-                      source: 'widget',
-                      user_location: userLocation
+                  // Prepare cart attributes for Shopify
+                  const cartData = {
+                    attributes: {
+                      'diy_label_enabled': 'true',
+                      'diy_label_print_shop_id': printShop.id.toString(),
+                      'diy_label_print_shop_name': printShop.name,
+                      'diy_label_print_shop_address': printShop.address,
+                      'diy_label_product_id': productId || '',
+                      'diy_label_customer_location': JSON.stringify(userLocation || {}),
+                      'diy_label_selection_timestamp': new Date().toISOString()
                     }
                   };
                   
-                  // Send order to API
-                  const response = await fetch('/api/orders/diy-label', {
+                  // Update Shopify cart with DIY Label attributes
+                  const response = await fetch('/cart/update.js', {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(orderData)
+                    body: JSON.stringify(cartData)
                   });
                   
-                  const result = await response.json();
-                  
-                  if (response.ok && result.success) {
-                    updateStatus('Order created successfully!');
+                  if (response.ok) {
+                    updateStatus('Print shop selection saved!');
                     
-                    // Show success message and close modal
-                    alert('Order created with ' + printShop.name + '!\\n\\n' +
-                      'Order ID: ' + result.order.id + '\\n' +
-                      'Status: ' + result.order.status + '\\n' +
-                      'Estimated completion: ' + result.order.estimatedCompletion);
+                    // Show success message
+                    const successMessage = '✅ Print shop selected: ' + printShop.name + '\\n\\n' +
+                      'Your selection has been saved to your cart.\\n' +
+                      'Complete your purchase to confirm local printing.';
+                    
+                    alert(successMessage);
                     
                     // Send message to parent window
                     if (window.parent !== window) {
                       window.parent.postMessage({
                         type: 'diy-label-selection',
                         printShop: printShop,
-                        order: result.order
+                        saved: true
                       }, '*');
                     }
                     
-                    // Close modal after successful order
-                    setTimeout(closeModal, 1000);
+                    // Close modal after successful selection
+                    setTimeout(closeModal, 2000);
                   } else {
-                    throw new Error(result.error || 'Failed to create order');
+                    const errorText = await response.text();
+                    throw new Error('Failed to save selection: ' + errorText);
                   }
                   
                 } catch (error) {
-                  console.error('Error creating order:', error);
-                  updateStatus('Failed to create order');
-                  alert('Error creating order: ' + error.message + '\\n\\nThis is a demo - in a real store, this would integrate with your checkout process.');
+                  console.error('Error saving selection:', error);
+                  updateStatus('Failed to save selection');
+                  alert('Error saving selection: ' + error.message + '\\n\\nPlease try again or contact support.');
                 }
               }
 
