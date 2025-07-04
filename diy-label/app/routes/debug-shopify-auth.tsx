@@ -24,6 +24,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       });
     }
 
+    // Check if access token looks valid
+    const tokenInfo = {
+      exists: !!store.access_token,
+      length: store.access_token?.length || 0,
+      prefix: store.access_token?.substring(0, 10) || 'No token',
+      isValidFormat: store.access_token?.startsWith('shpat_') || store.access_token?.startsWith('shpca_') || false
+    };
+
     // Test the access token with a simple API call
     const shopifyApiUrl = `https://${shopDomain}/admin/api/2023-10/shop.json`;
     
@@ -42,6 +50,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     } catch (e) {
       responseData = responseText;
     }
+
+    // Get response headers for debugging
+    const responseHeaders = {};
+    response.headers.forEach((value, key) => {
+      responseHeaders[key] = value;
+    });
 
     // Test product API specifically
     let productTestResult = null;
@@ -80,21 +94,27 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         scope: store.scope,
         active: store.active,
         created_at: store.created_at,
-        access_token_preview: store.access_token ? store.access_token.substring(0, 10) + '...' : 'No token'
+        access_token_preview: store.access_token ? store.access_token.substring(0, 10) + '...' : 'No token',
+        token_info: tokenInfo
       },
       shopifyApiTest: {
         url: shopifyApiUrl,
         status: response.status,
         ok: response.ok,
-        headers: Object.fromEntries(response.headers.entries()),
+        headers: responseHeaders,
         data: responseData
       },
       productApiTest: productTestResult,
-      recommendations: response.ok ? [] : [
-        'The access token appears to be invalid or expired',
-        'Try reinstalling the app to get a fresh access token',
-        'Check if the app has the required scopes: read_products, write_products',
-        'Verify the shop domain is correct'
+      recommendations: response.ok ? ['✅ Authentication is working correctly!'] : [
+        `❌ HTTP ${response.status}: ${response.statusText}`,
+        tokenInfo.isValidFormat ? '✅ Token format looks correct' : '❌ Token format is invalid',
+        `Token length: ${tokenInfo.length} characters`,
+        'Try these fixes:',
+        '1. Uninstall the app completely from Shopify admin',
+        '2. Clear browser cache and cookies',
+        '3. Reinstall the app with fresh OAuth flow',
+        '4. Check if the app is active in Partners Dashboard',
+        '5. Verify the shop domain matches exactly'
       ]
     });
 
