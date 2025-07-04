@@ -106,15 +106,20 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       },
       productApiTest: productTestResult,
       recommendations: response.ok ? ['✅ Authentication is working correctly!'] : [
-        `❌ HTTP ${response.status}: ${response.statusText}`,
+        `❌ HTTP ${response.status}: ${responseData?.errors || response.statusText}`,
         tokenInfo.isValidFormat ? '✅ Token format looks correct' : '❌ Token format is invalid',
         `Token length: ${tokenInfo.length} characters`,
-        'Try these fixes:',
-        '1. Uninstall the app completely from Shopify admin',
-        '2. Clear browser cache and cookies',
-        '3. Reinstall the app with fresh OAuth flow',
-        '4. Check if the app is active in Partners Dashboard',
-        '5. Verify the shop domain matches exactly'
+        '',
+        '🚀 SOLUTION: Complete App Reinstall Required',
+        '1. Go to Shopify Admin → Settings → Apps and sales channels',
+        '2. Find "DIY Label" app and click Uninstall',
+        '3. Clear browser cache and cookies (Ctrl+Shift+Delete)',
+        '4. Restart: shopify app dev',
+        '5. Click the new installation link',
+        '6. Complete OAuth flow with fresh permissions',
+        '',
+        '📋 The token format suggests an old/corrupted OAuth session.',
+        '📋 A fresh install will generate a proper access token.'
       ]
     });
 
