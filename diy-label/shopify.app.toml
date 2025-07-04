@@ -3,7 +3,7 @@
 client_id = "YOUR_CLIENT_ID_FROM_PARTNERS_DASHBOARD"
 name = "diy-label"
 handle = "diy-label"
-application_url = "https://increasing-exercise-calculation-yo.trycloudflare.com"
+application_url = "https://spirits-plumbing-definitions-obituaries.trycloudflare.com"
 embedded = true
 
 [build]
@@ -27,13 +27,13 @@ api_version = "2025-04"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products,read_orders,write_orders"
+scopes = "write_products,read_products,read_orders,write_orders"
 
 [auth]
 redirect_urls = [
-  "https://increasing-exercise-calculation-yo.trycloudflare.com/auth/callback",
-  "https://increasing-exercise-calculation-yo.trycloudflare.com/auth/shopify/callback", 
-  "https://increasing-exercise-calculation-yo.trycloudflare.com/api/auth/callback"
+  "https://spirits-plumbing-definitions-obituaries.trycloudflare.com/auth/callback",
+  "https://spirits-plumbing-definitions-obituaries.trycloudflare.com/auth/shopify/callback", 
+  "https://spirits-plumbing-definitions-obituaries.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
