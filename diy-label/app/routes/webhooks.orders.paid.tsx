@@ -45,9 +45,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         .eq('shop_domain', shop)
         .single();
 
-      if (!store) continue;
-
-      if (printShopId) {
+      if (store && printShopId) {
         // Create DIY Label order record
         const { data: diyOrder, error: orderError } = await supabaseAdmin
           .from('diy_label_orders')
@@ -90,40 +88,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           // TODO: Update Shopify order with DIY Label tracking info
         }
       } else {
-        console.log('DIY Label enabled but no print shop ID found in order attributes');
+        console.log('DIY Label enabled but no print shop ID found in order attributes or store not found');
       }
     } else {
       // Check individual line items for DIY Label enabled products (fallback)
-      const lineItems = order.line_items || [];
-      
-      for (const item of lineItems) {
-        const productId = item.product_id?.toString();
-        if (!productId) continue;
-
-        // Get store
-        const { data: store } = await supabaseAdmin
-          .from('shopify_stores')
-          .select('id')
-          .eq('shop_domain', shop)
-          .single();
-        
-        if (!store) continue;
-
-        // Check product settings
-        const { data: productSettings } = await supabaseAdmin
-          .from('product_settings')
-          .select('*')
-          .eq('shopify_store_id', store.id)
-          .eq('shopify_product_id', productId)
-          .single();
-
-        if (productSettings?.diy_label_enabled) {
-          console.log(`DIY Label product detected: ${order.id} for product ${productId} (no cart selection)`);
-          
-          // TODO: Send email to customer for print shop selection
-          // TODO: Create pending DIY Label order awaiting print shop selection
-        }
-      }
+      await processLineItemsForDIYLabel(order, shop);
     }
 
   } catch (error) {
@@ -132,3 +101,42 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   return new Response();
 };
+
+// Helper function to process line items
+async function processLineItemsForDIYLabel(order: any, shop: string) {
+  const lineItems = order.line_items || [];
+  
+  // Get store once for all line items
+  const { data: store } = await supabaseAdmin
+    .from('shopify_stores')
+    .select('id')
+    .eq('shop_domain', shop)
+    .single();
+  
+  if (!store) {
+    console.log('Store not found for shop:', shop);
+    return;
+  }
+
+  // Process each line item
+  for (const item of lineItems) {
+    const productId = item.product_id?.toString();
+    
+    if (productId) {
+      // Check product settings
+      const { data: productSettings } = await supabaseAdmin
+        .from('product_settings')
+        .select('*')
+        .eq('shopify_store_id', store.id)
+        .eq('shopify_product_id', productId)
+        .single();
+
+      if (productSettings?.diy_label_enabled) {
+        console.log(`DIY Label product detected: ${order.id} for product ${productId} (no cart selection)`);
+        
+        // TODO: Send email to customer for print shop selection
+        // TODO: Create pending DIY Label order awaiting print shop selection
+      }
+    }
+  }
+}
