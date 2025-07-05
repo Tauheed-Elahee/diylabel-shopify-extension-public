@@ -20,6 +20,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       // Try to clear common session patterns
       const commonShops = [
         'diy-label.myshopify.com',
+        'diy-label-test.myshopify.com',
         'test-store.myshopify.com',
         'dev-store.myshopify.com'
       ];
