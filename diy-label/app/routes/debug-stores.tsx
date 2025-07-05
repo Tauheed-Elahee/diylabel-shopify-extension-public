@@ -60,6 +60,54 @@ export const action = async ({ request }: LoaderFunctionArgs) => {
 
   if (action === 'delete-store' && storeId) {
     try {
+      console.log(`Starting deletion of store ${storeId} and all associated data...`);
+      
+      // Get store info for logging
+      const { data: storeInfo } = await supabaseAdmin
+        .from('shopify_stores')
+        .select('shop_domain')
+        .eq('id', storeId)
+        .single();
+      
+      // Get counts before deletion for confirmation
+      const { count: ordersCount } = await supabaseAdmin
+        .from('diy_label_orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('shopify_store_id', storeId);
+      
+      const { count: productSettingsCount } = await supabaseAdmin
+        .from('product_settings')
+        .select('*', { count: 'exact', head: true })
+        .eq('shopify_store_id', storeId);
+      
+      console.log(`Store ${storeInfo?.shop_domain} has ${ordersCount} orders and ${productSettingsCount} product settings`);
+      
+      // Delete all DIY Label orders for this store first
+      const { error: ordersError } = await supabaseAdmin
+        .from('diy_label_orders')
+        .delete()
+        .eq('shopify_store_id', storeId);
+      
+      if (ordersError) {
+        console.error('Error deleting orders:', ordersError);
+        throw new Error(`Failed to delete orders: ${ordersError.message}`);
+      }
+      
+      console.log(`Deleted ${ordersCount} orders for store ${storeId}`);
+      
+      // Delete all product settings for this store
+      const { error: settingsError } = await supabaseAdmin
+        .from('product_settings')
+        .delete()
+        .eq('shopify_store_id', storeId);
+      
+      if (settingsError) {
+        console.error('Error deleting product settings:', settingsError);
+        throw new Error(`Failed to delete product settings: ${settingsError.message}`);
+      }
+      
+      console.log(`Deleted ${productSettingsCount} product settings for store ${storeId}`);
+      
       // Delete the store (this will cascade delete related records)
       const { error } = await supabaseAdmin
         .from('shopify_stores')
@@ -67,10 +115,16 @@ export const action = async ({ request }: LoaderFunctionArgs) => {
         .eq('id', storeId);
 
       if (error) {
+        console.error('Error deleting store:', error);
         throw error;
       }
 
-      return json({ success: true, message: 'Store deleted successfully' });
+      console.log(`Successfully deleted store ${storeInfo?.shop_domain} and all associated data`);
+      
+      return json({ 
+        success: true, 
+        message: `Store "${storeInfo?.shop_domain}" deleted successfully along with ${ordersCount} orders and ${productSettingsCount} product settings` 
+      });
     } catch (error) {
       console.error('Error deleting store:', error);
       return json({ 
@@ -82,6 +136,49 @@ export const action = async ({ request }: LoaderFunctionArgs) => {
 
   if (action === 'delete-all-stores') {
     try {
+      console.log('Starting deletion of ALL stores and associated data...');
+      
+      // Get counts before deletion for confirmation
+      const { count: totalStores } = await supabaseAdmin
+        .from('shopify_stores')
+        .select('*', { count: 'exact', head: true });
+      
+      const { count: totalOrders } = await supabaseAdmin
+        .from('diy_label_orders')
+        .select('*', { count: 'exact', head: true });
+      
+      const { count: totalProductSettings } = await supabaseAdmin
+        .from('product_settings')
+        .select('*', { count: 'exact', head: true });
+      
+      console.log(`About to delete ${totalStores} stores, ${totalOrders} orders, and ${totalProductSettings} product settings`);
+      
+      // Delete all DIY Label orders first
+      const { error: ordersError } = await supabaseAdmin
+        .from('diy_label_orders')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+      
+      if (ordersError) {
+        console.error('Error deleting all orders:', ordersError);
+        throw new Error(`Failed to delete orders: ${ordersError.message}`);
+      }
+      
+      console.log(`Deleted ${totalOrders} orders`);
+      
+      // Delete all product settings
+      const { error: settingsError } = await supabaseAdmin
+        .from('product_settings')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+      
+      if (settingsError) {
+        console.error('Error deleting all product settings:', settingsError);
+        throw new Error(`Failed to delete product settings: ${settingsError.message}`);
+      }
+      
+      console.log(`Deleted ${totalProductSettings} product settings`);
+      
       // Delete all stores
       const { error } = await supabaseAdmin
         .from('shopify_stores')
@@ -89,10 +186,16 @@ export const action = async ({ request }: LoaderFunctionArgs) => {
         .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all (using impossible ID)
 
       if (error) {
+        console.error('Error deleting all stores:', error);
         throw error;
       }
 
-      return json({ success: true, message: 'All stores deleted successfully' });
+      console.log('Successfully deleted all stores and associated data');
+      
+      return json({ 
+        success: true, 
+        message: `All data deleted successfully: ${totalStores} stores, ${totalOrders} orders, and ${totalProductSettings} product settings` 
+      });
     } catch (error) {
       console.error('Error deleting all stores:', error);
       return json({ 
@@ -110,7 +213,11 @@ export default function DebugStores() {
   const fetcher = useFetcher();
 
   const deleteStore = (storeId: string, shopDomain: string) => {
-    if (confirm(`Are you sure you want to delete store "${shopDomain}"?\n\nThis will also delete:\n- All product settings\n- All DIY Label orders\n- All related data\n\nThis action cannot be undone.`)) {
+    const store = stores.find(s => s.id === storeId);
+    const ordersCount = store?.ordersCount || 0;
+    const productCount = store?.productCount || 0;
+    
+    if (confirm(`⚠️ Delete store "${shopDomain}"?\n\nThis will permanently delete:\n- ${ordersCount} DIY Label orders\n- ${productCount} product settings\n- All store data\n\nThis action cannot be undone.`)) {
       fetcher.submit(
         { action: 'delete-store', storeId },
         { method: 'POST' }
@@ -119,7 +226,10 @@ export default function DebugStores() {
   };
 
   const deleteAllStores = () => {
-    if (confirm(`⚠️ DANGER: Delete ALL stores?\n\nThis will permanently delete:\n- All ${totalStores} stores\n- All product settings\n- All DIY Label orders\n- All related data\n\nThis action cannot be undone.\n\nType "DELETE ALL" to confirm.`)) {
+    const totalOrders = stores.reduce((sum, store) => sum + store.ordersCount, 0);
+    const totalProducts = stores.reduce((sum, store) => sum + store.productCount, 0);
+    
+    if (confirm(`🚨 DANGER: Delete ALL stores?\n\nThis will permanently delete:\n- ${totalStores} stores\n- ${totalOrders} DIY Label orders\n- ${totalProducts} product settings\n- All related data\n\nThis action cannot be undone.\n\nType "DELETE ALL" to confirm.`)) {
       const confirmation = prompt('Type "DELETE ALL" to confirm:');
       if (confirmation === 'DELETE ALL') {
         fetcher.submit(
