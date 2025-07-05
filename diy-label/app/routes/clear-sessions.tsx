@@ -147,7 +147,7 @@ export default function ClearSessions() {
 
           <div style={{ 
             padding: '15px', 
-            border: '1px solid '#ff9800',
+            border: '1px solid \'#ff9800',
             borderRadius: '4px'
           }}>
             <h3>2. Browser Data Cleanup</h3>
@@ -170,7 +170,7 @@ export default function ClearSessions() {
 
           <div style={{ 
             padding: '15px', 
-            border: '1px solid '#4caf50',
+            border: '1px solid \'#4caf50',
             borderRadius: '4px'
           }}>
             <h3>3. Complete Reset Process</h3>
