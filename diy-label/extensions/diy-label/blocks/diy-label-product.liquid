@@ -571,15 +571,15 @@
   
   function showLocationError(errorMessage) {
     updateStatus('Location access failed', false);
-    const errorElement = document.getElementById('location-error-' + blockId);
+    const errorElement = document.getElementById('location-error-{{ block.id }}');
     if (errorElement) {
       errorElement.style.display = 'block';
       errorElement.innerHTML = `
         <div style="background: #fee8e8; border: 1px solid #fcc; border-radius: 8px; padding: 16px; margin: 16px 0; color: #d32f2f;">
           <h4 style="margin: 0 0 10px 0; font-size: 16px;">📍 Location Access Needed</h4>
-          <p style="margin: 0; font-size: 14px;">${errorMessage}</p>
+          <p style="margin: 0; font-size: 14px;">' + errorMessage + '</p>
         </div>
-      `;
+      ';
     }
   }
   
