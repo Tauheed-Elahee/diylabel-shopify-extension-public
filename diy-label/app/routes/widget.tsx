@@ -1,3 +1,16 @@
+        export default function Widget() {
+  return (
+    <div style={{ 
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      textAlign: 'center', 
+      maxWidth: '600px',
+      padding: '40px 20px', 
+      margin: '0 auto'
+    }}>
+      <h2 style={{ margin: '0 0 16px 0', color: '#333' }}>
+        🌱 DIY Label Widget
+      </h2>
+      <p style={{ margin: '0 0 24px 0', color: '#666', fontSize: '16px' }}>
         The DIY Label widget is now integrated directly into your theme using our app embed blocks.
       </p>
       <div style={{ 
@@ -21,19 +34,3 @@
     </div>
   );
 }
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      textAlign: 'center', 
-      maxWidth: '600px',
-      padding: '40px 20px', 
-      margin: '0 auto'
-    <div style={{ 
-    }}>
-  return (
-      <h2 style={{ margin: '0 0 16px 0', color: '#333' }}>
-export default function Widget() {
-        🌱 DIY Label Widget
-
-      </h2>
-// Redirect to documentation or return simple message
-      <p style={{ margin: '0 0 24px 0', color: '#666', fontSize: '16px' }}>
-// This route is now deprecated - widget functionality moved to modal implementation
