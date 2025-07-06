@@ -4,22 +4,18 @@ import { supabaseAdmin } from "../lib/supabase.server";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   if (request.method !== 'POST') {
-    return json({ error: 'Method not allowed' }, { status: 405 });
-  }
 
-  try {
-    const body = await request.json();
     const {
       shopifyOrderId,
       shopDomain,
       printShopId,
       productData,
-      customerData,
       options = {}
     } = body;
 
+    console.log('DIY Label order creation started for:', shopifyOrderId);
+    
     // Validate required fields
-    if (!shopifyOrderId || !shopDomain || !printShopId || !productData || !customerData) {
       return json({ 
         error: 'Missing required fields: shopifyOrderId, shopDomain, printShopId, productData, customerData' 
       }, { status: 400 });
@@ -27,13 +23,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     // Get store
     const { data: store, error: storeError } = await supabaseAdmin
-      .from('shopify_stores')
       .select('id')
       .eq('shop_domain', shopDomain)
-      .single();
 
     if (storeError || !store) {
-      return json({ error: 'Store not found' }, { status: 404 });
     }
 
     // Verify print shop exists and is active
@@ -42,13 +35,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       .select('id, name, active')
       .eq('id', printShopId)
       .eq('active', true)
-      .single();
 
     if (printShopError || !printShop) {
-      return json({ error: 'Print shop not found or inactive' }, { status: 404 });
     }
 
-    // Create DIY Label order
     const { data: order, error: orderError } = await supabaseAdmin
       .from('diy_label_orders')
       .insert({
@@ -60,17 +50,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         status: 'pending',
         tracking_info: {
           created_at: new Date().toISOString(),
-          options
+          options,
+          source: 'api_direct'
         }
       })
       .select()
       .single();
 
     if (orderError) {
-      throw orderError;
     }
 
-    // TODO: Send notification to print shop
+    
+    console.log('DIY Label order created successfully:', {
+      orderId: order.id,
+      shopifyOrderId: shopifyOrderId,
+      printShop: printShop.name
+    });
     // TODO: Send confirmation email to customer
     // TODO: Update Shopify order with DIY Label tracking info
 

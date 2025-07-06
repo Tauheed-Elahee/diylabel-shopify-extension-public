@@ -10,9 +10,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const order = payload as any;
     
     console.log('Processing order:', order.id);
-    console.log('Order attributes:', order.note_attributes);
+    console.log('Order note attributes:', order.note_attributes);
+    console.log('Order cart attributes:', order.cart_token);
     
-    // Check if this order has DIY Label attributes
+    // Check if this order has DIY Label attributes from cart
     const noteAttributes = order.note_attributes || [];
     const diyLabelEnabled = noteAttributes.find(
       attr => attr.name === 'diy_label_enabled' && attr.value === 'true'
@@ -46,7 +47,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         .single();
 
       if (store && printShopId) {
-        // Create DIY Label order record
+        console.log('Creating DIY Label order for print shop:', printShopId);
+        
+        // Create DIY Label order record in database
         const { data: diyOrder, error: orderError } = await supabaseAdmin
           .from('diy_label_orders')
           .insert({
@@ -73,6 +76,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               customer_location: customerLocation ? JSON.parse(customerLocation) : null,
               created_from_webhook: true,
               webhook_timestamp: new Date().toISOString()
+              order_created_at: order.created_at,
+              order_processed_at: order.processed_at
             }
           })
           .select()
@@ -86,9 +91,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           // TODO: Send notification to print shop
           // TODO: Send confirmation email to customer
           // TODO: Update Shopify order with DIY Label tracking info
+          
+          // Log successful creation
+          console.log('DIY Label order successfully processed:', {
+            diyOrderId: diyOrder.id,
+            shopifyOrderId: order.id,
+            printShopId: printShopId,
+            printShopName: printShopName,
+            customerEmail: order.customer?.email
+          });
         }
       } else {
-        console.log('DIY Label enabled but no print shop ID found in order attributes or store not found');
+        console.log('DIY Label enabled but missing data:', {
+          storeFound: !!store,
+          printShopId: printShopId,
+          printShopName: printShopName
+        });
       }
     } else {
       // Check individual line items for DIY Label enabled products (fallback)
