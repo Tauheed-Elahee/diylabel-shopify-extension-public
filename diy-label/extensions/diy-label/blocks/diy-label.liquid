@@ -1,131 +1,436 @@
 {% comment %}
-  DIY Label Widget - Universal Block
+  DIY Label Universal Widget
   Works on product pages, cart, and checkout
+  Automatically detects context and shows appropriate interface
 {% endcomment %}
 
 <div class="diy-label-widget" 
      id="diy-label-{{ block.id }}"
-     data-shop="{{ shop.permanent_domain }}"
+     data-block-id="{{ block.id }}"
+     data-shop-domain="{{ shop.permanent_domain }}"
      data-theme="{{ block.settings.theme }}"
-     data-api-url="{{ block.settings.api_url | default: 'https://spirits-plumbing-definitions-obituaries.trycloudflare.com' }}"
-     style="margin: {{ block.settings.margin }}px 0; padding: {{ block.settings.padding }}px;">
+     data-api-url="{% if block.settings.api_url != blank %}{{ block.settings.api_url }}{% else %}https://spirits-plumbing-definitions-obituaries.trycloudflare.com{% endif %}"
+     style="margin: {{ block.settings.margin }}px 0; 
+            padding: {{ block.settings.padding }}px;
+            {% if block.settings.background_color != blank %}background-color: {{ block.settings.background_color }};{% endif %}
+            {% if block.settings.border_radius > 0 %}border-radius: {{ block.settings.border_radius }}px;{% endif %}
+            {% if block.settings.show_border %}border: 1px solid {{ block.settings.border_color | default: '#e1e1e1' }};{% endif %}">
   
   {% if block.settings.show_title %}
-    <h3>{{ block.settings.title | default: "🌱 Choose Local Printing" }}</h3>
+    <h3 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 600;">
+      {{ block.settings.title | default: "🌱 Choose Local Printing" }}
+    </h3>
   {% endif %}
   
-  <div id="diy-label-content-{{ block.id }}">
-    <p>🌱 Loading local printing options...</p>
+  {% if block.settings.show_description %}
+    <p style="margin: 0 0 20px 0; color: #666;">
+      {{ block.settings.description | default: "Support your local community and reduce shipping impact by printing this item at a nearby shop." }}
+    </p>
+  {% endif %}
+  
+  <div id="diy-label-content-{{ block.id }}" class="diy-label-content">
+    <div class="diy-label-loading" style="text-align: center; padding: 20px;">
+      <p style="margin: 0; color: #666;">🌱 Loading DIY Label...</p>
+    </div>
   </div>
 </div>
 
 <script>
 (function() {
+  'use strict';
+  
   const blockId = '{{ block.id }}';
   const container = document.getElementById('diy-label-' + blockId);
   const content = document.getElementById('diy-label-content-' + blockId);
   
-  if (!container) return;
+  if (!container || !content) return;
   
   const config = {
-    shopDomain: container.getAttribute('data-shop'),
+    blockId: blockId,
+    shopDomain: container.getAttribute('data-shop-domain'),
     theme: container.getAttribute('data-theme'),
-    apiUrl: container.getAttribute('data-api-url')
+    apiUrl: container.getAttribute('data-api-url'),
+    showTitle: {{ block.settings.show_title | json }},
+    title: {{ block.settings.title | json }},
+    showDescription: {{ block.settings.show_description | json }},
+    description: {{ block.settings.description | json }}
   };
   
-  // Detect context and product
-  const isProductPage = window.location.pathname.includes('/products/');
-  const productId = isProductPage ? getProductId() : null;
+  // Detect context
+  const context = detectContext();
+  console.log('DIY Label: Detected context:', context);
+  
+  function detectContext() {
+    const path = window.location.pathname;
+    
+    if (path.includes('/products/')) {
+      return 'product';
+    } else if (path.includes('/cart') || path.includes('/checkout')) {
+      return 'cart';
+    } else if (document.querySelector('.cart') || document.querySelector('[data-cart]')) {
+      return 'cart';
+    }
+    
+    if (typeof window.meta !== 'undefined' && window.meta.product) {
+      return 'product';
+    }
+    
+    return 'cart';
+  }
   
   function getProductId() {
     const pathParts = window.location.pathname.split('/');
     const productIndex = pathParts.indexOf('products');
-    return productIndex !== -1 ? pathParts[productIndex + 1] : null;
-  }
-  
-  // Initialize widget
-  async function init() {
-    if (isProductPage && productId) {
-      // Check if DIY Label is enabled for this product
-      const isEnabled = await checkProductEnabled(productId);
-      if (!isEnabled) {
-        container.style.display = 'none';
-        return;
-      }
+    if (productIndex !== -1 && pathParts[productIndex + 1]) {
+      return pathParts[productIndex + 1];
     }
     
-    // Show widget button
-    content.innerHTML = `
-      <button onclick="openDIYLabelModal()" 
-              style="width: 100%; padding: 12px 24px; background: #007cba; color: white; 
-                     border: none; border-radius: 6px; font-size: 16px; cursor: pointer;">
-        🌱 Choose Local Print Shop
-      </button>
-    `;
+    const productMeta = document.querySelector('meta[property="product:id"]');
+    if (productMeta) {
+      return productMeta.getAttribute('content');
+    }
+    
+    if (typeof window.meta !== 'undefined' && window.meta.product) {
+      return window.meta.product.id;
+    }
+    
+    return null;
   }
   
-  async function checkProductEnabled(productId) {
+  async function initialize() {
+    try {
+      if (context === 'product') {
+        await initializeProductContext();
+      } else {
+        await initializeCartContext();
+      }
+    } catch (error) {
+      console.error('DIY Label initialization error:', error);
+      showError('Failed to load DIY Label widget');
+    }
+  }
+  
+  async function initializeProductContext() {
+    const productId = getProductId();
+    
+    if (!productId) {
+      content.style.display = 'none';
+      return;
+    }
+    
+    const isEnabled = await checkProductSettings(productId);
+    
+    if (!isEnabled) {
+      content.style.display = 'none';
+      return;
+    }
+    
+    showProductWidget(productId);
+  }
+  
+  async function initializeCartContext() {
+    const cartData = await getCartData();
+    
+    if (!cartData || !cartData.items) {
+      content.style.display = 'none';
+      return;
+    }
+    
+    const diyProducts = await checkCartForDIYProducts(cartData.items);
+    
+    if (diyProducts.length === 0) {
+      content.style.display = 'none';
+      return;
+    }
+    
+    showCartWidget(diyProducts, cartData);
+  }
+  
+  async function checkProductSettings(productId) {
     try {
       const response = await fetch(
         config.apiUrl + '/api/product-settings?shop=' + 
-        encodeURIComponent(config.shopDomain) + '&product=' + encodeURIComponent(productId)
+        encodeURIComponent(config.shopDomain) + 
+        '&product=' + encodeURIComponent(productId)
       );
+      
+      if (!response.ok) return false;
+      
       const data = await response.json();
       return data.enabled || false;
     } catch (error) {
+      console.error('Error checking product settings:', error);
       return false;
     }
   }
   
-  window.openDIYLabelModal = function() {
-    // Create modal
+  async function getCartData() {
+    try {
+      const response = await fetch('/cart.js');
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      return null;
+    }
+  }
+  
+  async function checkCartForDIYProducts(items) {
+    const diyProducts = [];
+    
+    for (const item of items) {
+      const productId = item.product_id;
+      const isEnabled = await checkProductSettings(productId);
+      
+      if (isEnabled) {
+        diyProducts.push({
+          id: productId,
+          title: item.product_title,
+          quantity: item.quantity,
+          handle: item.handle
+        });
+      }
+    }
+    
+    return diyProducts;
+  }
+  
+  function showProductWidget(productId) {
+    let html = '<button id="diy-label-product-btn-' + blockId + '" ' +
+            'style="width: 100%; padding: 12px 24px; background: #007cba; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer;">' +
+            '🌱 Choose Local Print Shop</button>';
+    
+    content.innerHTML = html;
+    
+    document.getElementById('diy-label-product-btn-' + blockId).addEventListener('click', function() {
+      openModal('product', { productId: productId });
+    });
+  }
+  
+  function showCartWidget(diyProducts, cartData) {
+    const totalQuantity = diyProducts.reduce((sum, p) => sum + p.quantity, 0);
+    const hasSelection = cartData.attributes && cartData.attributes.diy_label_enabled === 'true';
+    const selectedShop = cartData.attributes ? cartData.attributes.diy_label_print_shop_name : null;
+    
+    let html = '';
+    
+    if (hasSelection) {
+      html += '<div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: #e8f5e8; border-radius: 6px; margin-bottom: 12px;">' +
+              '<div>' +
+              '<p style="margin: 0; font-weight: 600; color: #28a745;">✅ Local Print Shop Selected</p>' +
+              '<p style="margin: 0; font-size: 14px; color: #666;">' + selectedShop + '</p>' +
+              '</div>' +
+              '<button onclick="window.diyLabelOpenModal_' + blockId + '()" style="padding: 8px 16px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer;">Change</button>' +
+              '</div>';
+    } else {
+      html += '<div style="padding: 12px; background: #f8f9fa; border-radius: 6px; margin-bottom: 12px;">' +
+              '<p style="margin: 0 0 8px 0; font-weight: 600;">' + totalQuantity + ' item' + (totalQuantity !== 1 ? 's' : '') + ' can be printed locally</p>' +
+              '<p style="margin: 0 0 12px 0; font-size: 14px; color: #666;">Reduce shipping impact and support your community</p>' +
+              '<button onclick="window.diyLabelOpenModal_' + blockId + '()" style="width: 100%; padding: 10px; background: #28a745; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">Choose Local Print Shop</button>' +
+              '</div>';
+    }
+    
+    content.innerHTML = html;
+    
+    window['diyLabelOpenModal_' + blockId] = function() {
+      openModal('cart', { products: diyProducts, cartData: cartData });
+    };
+  }
+  
+  function openModal(context, data) {
     const modal = document.createElement('div');
+    modal.id = 'diy-label-modal-' + blockId;
     modal.style.cssText = `
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.8); z-index: 10000; display: flex;
-      align-items: center; justify-content: center; padding: 20px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      box-sizing: border-box;
     `;
     
     const modalContent = document.createElement('div');
     modalContent.style.cssText = `
-      background: white; border-radius: 12px; width: 100%; max-width: 900px;
-      max-height: 90vh; overflow: hidden; position: relative;
+      background: white;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 900px;
+      max-height: 90vh;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      position: relative;
+      display: flex;
+      flex-direction: column;
     `;
     
-    const header = document.createElement('div');
-    header.style.cssText = `
-      padding: 20px; border-bottom: 1px solid #eee; display: flex;
-      justify-content: space-between; align-items: center;
+    const modalHeader = document.createElement('div');
+    modalHeader.style.cssText = `
+      padding: 20px 24px;
+      border-bottom: 1px solid #e1e1e1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8f9fa;
     `;
-    header.innerHTML = `
-      <h2 style="margin: 0;">🌱 Choose Local Print Shop</h2>
-      <button onclick="this.closest('.modal').remove()" 
-              style="background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
+    
+    const modalTitle = document.createElement('h2');
+    modalTitle.style.cssText = `
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: #333333;
+    `;
+    modalTitle.textContent = '🌱 Choose Local Print Shop';
+    
+    const closeButton = document.createElement('button');
+    closeButton.style.cssText = `
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666666;
+      padding: 4px;
+      border-radius: 4px;
+    `;
+    closeButton.innerHTML = '×';
+    closeButton.addEventListener('click', function() {
+      document.body.removeChild(modal);
+    });
+    
+    modalHeader.appendChild(modalTitle);
+    modalHeader.appendChild(closeButton);
+    
+    const modalBody = document.createElement('div');
+    modalBody.style.cssText = `
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
     `;
     
     const iframe = document.createElement('iframe');
-    iframe.src = config.apiUrl + '/widget?shop=' + encodeURIComponent(config.shopDomain) + 
-                 (productId ? '&product=' + encodeURIComponent(productId) : '');
-    iframe.style.cssText = 'width: 100%; height: 600px; border: none;';
+    const iframeSrc = config.apiUrl + '/widget?' + 
+      'shop=' + encodeURIComponent(config.shopDomain) + 
+      '&source=' + encodeURIComponent(context) +
+      '&theme=' + encodeURIComponent(config.theme);
     
-    modalContent.appendChild(header);
-    modalContent.appendChild(iframe);
+    if (context === 'product' && data.productId) {
+      iframe.src = iframeSrc + '&product=' + encodeURIComponent(data.productId);
+    } else {
+      iframe.src = iframeSrc;
+    }
+    
+    iframe.style.cssText = 'width: 100%; height: 600px; border: none; background: white;';
+    iframe.frameBorder = '0';
+    iframe.loading = 'lazy';
+    
+    window.addEventListener('message', function(event) {
+      if (event.origin !== config.apiUrl) return;
+      
+      if (event.data.type === 'diy-label-resize') {
+        iframe.style.height = Math.max(600, event.data.height) + 'px';
+      }
+      
+      if (event.data.type === 'diy-label-selection') {
+        const printShop = event.data.printShop;
+        
+        if (context === 'product') {
+          showSuccessMessage(printShop.name);
+        } else {
+          updateCartWithSelection(printShop);
+        }
+        
+        document.body.removeChild(modal);
+        
+        if (context === 'cart') {
+          setTimeout(() => {
+            initialize();
+          }, 1000);
+        }
+      }
+    });
+    
+    modalBody.appendChild(iframe);
+    modalContent.appendChild(modalHeader);
+    modalContent.appendChild(modalBody);
     modal.appendChild(modalContent);
-    modal.className = 'modal';
     
     document.body.appendChild(modal);
     
-    // Handle messages from iframe
-    window.addEventListener('message', function(event) {
-      if (event.data.type === 'diy-label-selection') {
-        modal.remove();
-        alert('Print shop selected: ' + event.data.printShop.name);
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
       }
     });
-  };
+  }
   
-  // Initialize
-  init();
+  async function updateCartWithSelection(printShop) {
+    try {
+      const updateData = {
+        attributes: {
+          'diy_label_enabled': 'true',
+          'diy_label_print_shop_id': printShop.id.toString(),
+          'diy_label_print_shop_name': printShop.name,
+          'diy_label_print_shop_address': printShop.address
+        }
+      };
+      
+      const response = await fetch('/cart/update.js', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData)
+      });
+      
+      if (response.ok) {
+        showSuccessMessage(printShop.name);
+      }
+    } catch (error) {
+      console.error('Error updating cart:', error);
+    }
+  }
+  
+  function showSuccessMessage(shopName) {
+    const message = document.createElement('div');
+    message.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #28a745;
+      color: white;
+      padding: 15px 20px;
+      border-radius: 8px;
+      z-index: 10001;
+      font-family: system-ui, -apple-system, sans-serif;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-width: 300px;
+    `;
+    message.innerHTML = '<strong>✅ Print Shop Selected</strong><br>' + shopName;
+    
+    document.body.appendChild(message);
+    
+    setTimeout(function() {
+      if (message.parentNode) {
+        message.parentNode.removeChild(message);
+      }
+    }, 4000);
+  }
+  
+  function showError(message) {
+    content.innerHTML = '<div style="text-align: center; padding: 20px; color: #d32f2f;"><p>' + message + '</p></div>';
+  }
+  
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initialize);
+  } else {
+    initialize();
+  }
+  
 })();
 </script>
 
@@ -134,6 +439,10 @@
   "name": "DIY Label",
   "target": "section",
   "settings": [
+    {
+      "type": "header",
+      "content": "Content"
+    },
     {
       "type": "checkbox",
       "id": "show_title",
@@ -147,35 +456,85 @@
       "default": "🌱 Choose Local Printing"
     },
     {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "Show Description",
+      "default": true
+    },
+    {
+      "type": "textarea",
+      "id": "description",
+      "label": "Description",
+      "default": "Support your local community and reduce shipping impact by printing this item at a nearby shop."
+    },
+    {
+      "type": "header",
+      "content": "Widget Settings"
+    },
+    {
       "type": "select",
       "id": "theme",
-      "label": "Theme",
+      "label": "Widget Theme",
       "options": [
         { "value": "light", "label": "Light" },
-        { "value": "dark", "label": "Dark" }
+        { "value": "dark", "label": "Dark" },
+        { "value": "auto", "label": "Auto" }
       ],
       "default": "light"
     },
     {
       "type": "url",
       "id": "api_url",
-      "label": "API URL"
+      "label": "API URL",
+      "info": "DIY Label API endpoint"
+    },
+    {
+      "type": "header",
+      "content": "Styling"
     },
     {
       "type": "range",
       "id": "margin",
-      "label": "Margin",
+      "label": "Margin (px)",
       "min": 0,
       "max": 50,
+      "step": 5,
       "default": 20
     },
     {
       "type": "range",
       "id": "padding",
-      "label": "Padding",
+      "label": "Padding (px)",
       "min": 0,
       "max": 50,
+      "step": 5,
       "default": 20
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background Color"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_border",
+      "label": "Show Border",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border Color",
+      "default": "#e1e1e1"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "label": "Border Radius (px)",
+      "min": 0,
+      "max": 20,
+      "step": 2,
+      "default": 8
     }
   ]
 }
