@@ -1,8 +1,0 @@
-# Cart page extension
-
-api_version = "2025-04"
-
-[[extensions]]
-type = "theme_app_extension"
-name = "DIY Label Cart"
-handle = "diy-label-cart"
