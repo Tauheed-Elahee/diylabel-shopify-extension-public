@@ -75,7 +75,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               print_shop_address: printShopAddress,
               customer_location: customerLocation ? JSON.parse(customerLocation) : null,
               created_from_webhook: true,
-              webhook_timestamp: new Date().toISOString()
+              webhook_timestamp: new Date().toISOString(),
               order_created_at: order.created_at,
               order_processed_at: order.processed_at
             }
