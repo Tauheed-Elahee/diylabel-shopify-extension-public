@@ -11,9 +11,7 @@ import {
   BlockStack,
   InlineStack,
   Badge,
-  DataTable,
   EmptyState,
-  Spinner,
 } from "@shopify/polaris";
 import { TitleBar, useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -23,7 +21,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
 
   try {
-    // Get store from database or create if doesn't exist
     const { data: existingStore, error: storeError } = await supabaseAdmin
       .from('shopify_stores')
       .select('*')
@@ -32,7 +29,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
     let store = existingStore;
 
-    // If store doesn't exist, create it
     if (storeError && storeError.code === 'PGRST116') {
       const { data: newStore, error: createError } = await supabaseAdmin
         .from('shopify_stores')
@@ -46,22 +42,18 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         .single();
 
       if (createError) {
-        console.error('Failed to create store:', createError);
         throw new Error(`Failed to create store: ${createError.message}`);
       }
       
       store = newStore;
     } else if (storeError) {
-      console.error('Database error:', storeError);
       throw new Error(`Database error: ${storeError.message}`);
     }
 
-    // Ensure we have a valid store
     if (!store) {
       throw new Error('Failed to get or create store');
     }
 
-    // Get products with DIY Label settings
     const productsResponse = await admin.graphql(`
       query getProducts($first: Int!) {
         products(first: $first) {
@@ -71,16 +63,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
               title
               handle
               status
-              totalInventory
-              createdAt
-              images(first: 1) {
-                edges {
-                  node {
-                    url
-                    altText
-                  }
-                }
-              }
             }
           }
         }
@@ -92,7 +74,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     const productsData = await productsResponse.json();
     const products = productsData.data?.products?.edges || [];
 
-    // Get product settings from database
     const productIds = products.map((p: any) => p.node.id.replace('gid://shopify/Product/', ''));
     const { data: productSettings } = await supabaseAdmin
       .from('product_settings')
@@ -100,66 +81,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       .eq('shopify_store_id', store.id)
       .in('shopify_product_id', productIds);
 
-    // Get recent DIY Label orders
-    const { data: recentOrders } = await supabaseAdmin
-      .from('diy_label_orders')
-      .select(`
-        *,
-        print_shops (
-          name,
-          address
-        )
-      `)
-      .eq('shopify_store_id', store.id)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    // Get print shops count
-    const { count: printShopsCount } = await supabaseAdmin
-      .from('print_shops')
-      .select('*', { count: 'exact', head: true })
-      .eq('active', true);
-
     return json({
       store,
       products,
       productSettings: productSettings || [],
-      recentOrders: recentOrders || [],
       stats: {
         totalProducts: products.length,
         enabledProducts: productSettings?.filter(p => p.diy_label_enabled).length || 0,
-        totalOrders: recentOrders?.length || 0,
-        printShops: printShopsCount || 0
       }
     });
 
   } catch (error) {
-    console.error('Loader error:', error);
-    
-    // More detailed error logging
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      });
-    }
-    
-    // Check if it's a Shopify authentication error
-    if (error instanceof Error && error.message.includes('401')) {
-      throw new Error('Shopify authentication failed. Please reinstall the app.');
-    }
-    
-    // Check if it's a database connection error
-    if (error instanceof Error && (error.message.includes('ECONNREFUSED') || error.message.includes('database'))) {
-      throw new Error('Database connection failed. Please check your Supabase configuration.');
-    }
-    
-    // Check if it's a GraphQL error
-    if (error instanceof Error && error.message.includes('GraphQL')) {
-      throw new Error('Shopify API error. Please check your app permissions and try again.');
-    }
-    
     throw new Error(`Failed to load dashboard data: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
@@ -215,11 +147,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Index() {
-  const { store, products, productSettings, recentOrders, stats } = useLoaderData<typeof loader>();
+  const { store, products, productSettings, stats } = useLoaderData<typeof loader>();
   const fetcher = useFetcher();
   const shopify = useAppBridge();
-
-  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (fetcher.data?.success) {
@@ -230,7 +160,6 @@ export default function Index() {
   }, [fetcher.data, shopify]);
 
   const toggleProduct = (productId: string, currentlyEnabled: boolean) => {
-    setIsLoading(true);
     fetcher.submit(
       {
         action: 'toggle-product',
@@ -239,7 +168,6 @@ export default function Index() {
       },
       { method: 'POST' }
     );
-    setTimeout(() => setIsLoading(false), 1000);
   };
 
   const getProductSettings = (productId: string) => {
@@ -247,32 +175,10 @@ export default function Index() {
     return productSettings.find(p => p.shopify_product_id === cleanId);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
-  const orderRows = recentOrders.map(order => [
-    order.shopify_order_id,
-    order.print_shops?.name || 'Unassigned',
-    <Badge key={order.id} status={
-      order.status === 'completed' ? 'success' :
-      order.status === 'cancelled' ? 'critical' :
-      order.status === 'printing' ? 'attention' : 'info'
-    }>
-      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-    </Badge>,
-    formatDate(order.created_at)
-  ]);
-
   return (
     <Page>
       <TitleBar title="DIY Label Dashboard" />
       <BlockStack gap="500">
-        {/* Stats Overview */}
         <Layout>
           <Layout.Section>
             <Card>
@@ -280,62 +186,15 @@ export default function Index() {
                 <Text as="h2" variant="headingMd">
                   Overview
                 </Text>
-                <Layout>
-                  <Layout.Section oneQuarter>
-                    <Card>
-                      <BlockStack gap="200">
-                        <Text as="h3" variant="headingSm" color="subdued">
-                          Total Products
-                        </Text>
-                        <Text as="p" variant="headingLg">
-                          {stats.totalProducts}
-                        </Text>
-                      </BlockStack>
-                    </Card>
-                  </Layout.Section>
-                  <Layout.Section oneQuarter>
-                    <Card>
-                      <BlockStack gap="200">
-                        <Text as="h3" variant="headingSm" color="subdued">
-                          DIY Label Enabled
-                        </Text>
-                        <Text as="p" variant="headingLg">
-                          {stats.enabledProducts}
-                        </Text>
-                      </BlockStack>
-                    </Card>
-                  </Layout.Section>
-                  <Layout.Section oneQuarter>
-                    <Card>
-                      <BlockStack gap="200">
-                        <Text as="h3" variant="headingSm" color="subdued">
-                          Recent Orders
-                        </Text>
-                        <Text as="p" variant="headingLg">
-                          {stats.totalOrders}
-                        </Text>
-                      </BlockStack>
-                    </Card>
-                  </Layout.Section>
-                  <Layout.Section oneQuarter>
-                    <Card>
-                      <BlockStack gap="200">
-                        <Text as="h3" variant="headingSm" color="subdued">
-                          Partner Print Shops
-                        </Text>
-                        <Text as="p" variant="headingLg">
-                          {stats.printShops}
-                        </Text>
-                      </BlockStack>
-                    </Card>
-                  </Layout.Section>
-                </Layout>
+                <InlineStack gap="400">
+                  <Text as="p">Total Products: {stats.totalProducts}</Text>
+                  <Text as="p">DIY Label Enabled: {stats.enabledProducts}</Text>
+                </InlineStack>
               </BlockStack>
             </Card>
           </Layout.Section>
         </Layout>
 
-        {/* Products Management */}
         <Layout>
           <Layout.Section>
             <Card>
@@ -344,19 +203,11 @@ export default function Index() {
                   <Text as="h2" variant="headingMd">
                     Product Settings
                   </Text>
-                  <Text as="p" variant="bodyMd" color="subdued">
-                    Enable DIY Label for specific products
-                  </Text>
                 </InlineStack>
                 
                 {products.length === 0 ? (
                   <EmptyState
                     heading="No products found"
-                    action={{
-                      content: 'Add products',
-                      url: `shopify:admin/products`
-                    }}
-                    image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
                   >
                     <p>Add products to your store to enable DIY Label functionality.</p>
                   </EmptyState>
@@ -369,85 +220,27 @@ export default function Index() {
                       return (
                         <Card key={product.node.id}>
                           <InlineStack align="space-between" blockAlign="center">
-                            <InlineStack gap="400" blockAlign="center">
-                              {product.node.images.edges[0] && (
-                                <div style={{ width: '60px', height: '60px', borderRadius: '8px', overflow: 'hidden' }}>
-                                  <img 
-                                    src={product.node.images.edges[0].node.url}
-                                    alt={product.node.images.edges[0].node.altText || product.node.title}
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                  />
-                                </div>
-                              )}
                               <BlockStack gap="100">
                                 <Text as="h3" variant="headingSm">
                                   {product.node.title}
                                 </Text>
-                                <InlineStack gap="200">
-                                  <Badge status={product.node.status === 'ACTIVE' ? 'success' : 'info'}>
-                                    {product.node.status.toLowerCase()}
-                                  </Badge>
-                                  {isEnabled && (
-                                    <Badge status="attention">DIY Label Enabled</Badge>
-                                  )}
-                                </InlineStack>
+                                {isEnabled && (
+                                  <Badge status="success">DIY Label Enabled</Badge>
+                                )}
                               </BlockStack>
-                            </InlineStack>
                             
-                            <InlineStack gap="200">
-                              <Button
-                                variant={isEnabled ? "primary" : "secondary"}
-                                onClick={() => toggleProduct(product.node.id, isEnabled)}
-                                loading={isLoading && fetcher.formData?.get('productId') === product.node.id.replace('gid://shopify/Product/', '')}
-                              >
-                                {isEnabled ? 'Disable' : 'Enable'} DIY Label
-                              </Button>
-                              <Button
-                                url={`shopify:admin/products/${product.node.id.replace('gid://shopify/Product/', '')}`}
-                                target="_blank"
-                                variant="plain"
-                              >
-                                View Product
-                              </Button>
-                            </InlineStack>
+                            <Button
+                              variant={isEnabled ? "primary" : "secondary"}
+                              onClick={() => toggleProduct(product.node.id, isEnabled)}
+                              loading={fetcher.state === 'submitting'}
+                            >
+                              {isEnabled ? 'Disable' : 'Enable'} DIY Label
+                            </Button>
                           </InlineStack>
                         </Card>
                       );
                     })}
                   </BlockStack>
-                )}
-              </BlockStack>
-            </Card>
-          </Layout.Section>
-        </Layout>
-
-        {/* Recent Orders */}
-        <Layout>
-          <Layout.Section>
-            <Card>
-              <BlockStack gap="400">
-                <InlineStack align="space-between">
-                  <Text as="h2" variant="headingMd">
-                    Recent DIY Label Orders
-                  </Text>
-                  <Button variant="plain" url="/app/orders">
-                    View all orders
-                  </Button>
-                </InlineStack>
-                
-                {recentOrders.length === 0 ? (
-                  <EmptyState
-                    heading="No DIY Label orders yet"
-                    image="https://cdn.shopify.com/s/files/1/0262/4071/2726/files/emptystate-files.png"
-                  >
-                    <p>When customers choose local printing, their orders will appear here.</p>
-                  </EmptyState>
-                ) : (
-                  <DataTable
-                    columnContentTypes={['text', 'text', 'text', 'text']}
-                    headings={['Order ID', 'Print Shop', 'Status', 'Date']}
-                    rows={orderRows}
-                  />
                 )}
               </BlockStack>
             </Card>

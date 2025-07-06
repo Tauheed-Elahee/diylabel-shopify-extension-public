@@ -1,0 +1,182 @@
+{% comment %}
+  DIY Label Widget - Universal Block
+  Works on product pages, cart, and checkout
+{% endcomment %}
+
+<div class="diy-label-widget" 
+     id="diy-label-{{ block.id }}"
+     data-shop="{{ shop.permanent_domain }}"
+     data-theme="{{ block.settings.theme }}"
+     data-api-url="{{ block.settings.api_url | default: 'https://spirits-plumbing-definitions-obituaries.trycloudflare.com' }}"
+     style="margin: {{ block.settings.margin }}px 0; padding: {{ block.settings.padding }}px;">
+  
+  {% if block.settings.show_title %}
+    <h3>{{ block.settings.title | default: "🌱 Choose Local Printing" }}</h3>
+  {% endif %}
+  
+  <div id="diy-label-content-{{ block.id }}">
+    <p>🌱 Loading local printing options...</p>
+  </div>
+</div>
+
+<script>
+(function() {
+  const blockId = '{{ block.id }}';
+  const container = document.getElementById('diy-label-' + blockId);
+  const content = document.getElementById('diy-label-content-' + blockId);
+  
+  if (!container) return;
+  
+  const config = {
+    shopDomain: container.getAttribute('data-shop'),
+    theme: container.getAttribute('data-theme'),
+    apiUrl: container.getAttribute('data-api-url')
+  };
+  
+  // Detect context and product
+  const isProductPage = window.location.pathname.includes('/products/');
+  const productId = isProductPage ? getProductId() : null;
+  
+  function getProductId() {
+    const pathParts = window.location.pathname.split('/');
+    const productIndex = pathParts.indexOf('products');
+    return productIndex !== -1 ? pathParts[productIndex + 1] : null;
+  }
+  
+  // Initialize widget
+  async function init() {
+    if (isProductPage && productId) {
+      // Check if DIY Label is enabled for this product
+      const isEnabled = await checkProductEnabled(productId);
+      if (!isEnabled) {
+        container.style.display = 'none';
+        return;
+      }
+    }
+    
+    // Show widget button
+    content.innerHTML = `
+      <button onclick="openDIYLabelModal()" 
+              style="width: 100%; padding: 12px 24px; background: #007cba; color: white; 
+                     border: none; border-radius: 6px; font-size: 16px; cursor: pointer;">
+        🌱 Choose Local Print Shop
+      </button>
+    `;
+  }
+  
+  async function checkProductEnabled(productId) {
+    try {
+      const response = await fetch(
+        config.apiUrl + '/api/product-settings?shop=' + 
+        encodeURIComponent(config.shopDomain) + '&product=' + encodeURIComponent(productId)
+      );
+      const data = await response.json();
+      return data.enabled || false;
+    } catch (error) {
+      return false;
+    }
+  }
+  
+  window.openDIYLabelModal = function() {
+    // Create modal
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8); z-index: 10000; display: flex;
+      align-items: center; justify-content: center; padding: 20px;
+    `;
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+      background: white; border-radius: 12px; width: 100%; max-width: 900px;
+      max-height: 90vh; overflow: hidden; position: relative;
+    `;
+    
+    const header = document.createElement('div');
+    header.style.cssText = `
+      padding: 20px; border-bottom: 1px solid #eee; display: flex;
+      justify-content: space-between; align-items: center;
+    `;
+    header.innerHTML = `
+      <h2 style="margin: 0;">🌱 Choose Local Print Shop</h2>
+      <button onclick="this.closest('.modal').remove()" 
+              style="background: none; border: none; font-size: 24px; cursor: pointer;">×</button>
+    `;
+    
+    const iframe = document.createElement('iframe');
+    iframe.src = config.apiUrl + '/widget?shop=' + encodeURIComponent(config.shopDomain) + 
+                 (productId ? '&product=' + encodeURIComponent(productId) : '');
+    iframe.style.cssText = 'width: 100%; height: 600px; border: none;';
+    
+    modalContent.appendChild(header);
+    modalContent.appendChild(iframe);
+    modal.appendChild(modalContent);
+    modal.className = 'modal';
+    
+    document.body.appendChild(modal);
+    
+    // Handle messages from iframe
+    window.addEventListener('message', function(event) {
+      if (event.data.type === 'diy-label-selection') {
+        modal.remove();
+        alert('Print shop selected: ' + event.data.printShop.name);
+      }
+    });
+  };
+  
+  // Initialize
+  init();
+})();
+</script>
+
+{% schema %}
+{
+  "name": "DIY Label",
+  "target": "section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_title",
+      "label": "Show Title",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "🌱 Choose Local Printing"
+    },
+    {
+      "type": "select",
+      "id": "theme",
+      "label": "Theme",
+      "options": [
+        { "value": "light", "label": "Light" },
+        { "value": "dark", "label": "Dark" }
+      ],
+      "default": "light"
+    },
+    {
+      "type": "url",
+      "id": "api_url",
+      "label": "API URL"
+    },
+    {
+      "type": "range",
+      "id": "margin",
+      "label": "Margin",
+      "min": 0,
+      "max": 50,
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "padding",
+      "label": "Padding",
+      "min": 0,
+      "max": 50,
+      "default": 20
+    }
+  ]
+}
+{% endschema %}
