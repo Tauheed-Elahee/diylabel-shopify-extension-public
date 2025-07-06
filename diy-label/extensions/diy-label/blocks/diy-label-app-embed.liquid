@@ -1,10 +1,10 @@
 {% comment %}
-  DIY Label Widget Block
-  Can be added to any section via the theme editor
-  Combines functionality from all block variants
+  DIY Label App Embed Block
+  Can be added to product sections via theme editor
+  Simplified version focused on product pages
 {% endcomment %}
 
-<div class="diy-label-block" 
+<div class="diy-label-app-embed-block" 
      style="margin: {{ block.settings.margin }}px 0; 
             padding: {{ block.settings.padding }}px;
             {% if block.settings.background_color != blank %}background-color: {{ block.settings.background_color }};{% endif %}
@@ -28,7 +28,7 @@
     </p>
   {% endif %}
   
-  <div id="diy-label-widget-block-{{ block.id }}" 
+  <div id="diy-label-app-embed-block-{{ block.id }}" 
        data-product-id="{% if product %}{{ product.id }}{% endif %}"
        data-shop-domain="{{ shop.permanent_domain }}"
        data-theme="{{ block.settings.theme }}"
@@ -52,7 +52,7 @@
 <script>
 (function() {
   const blockId = '{{ block.id }}';
-  const widgetElement = document.getElementById('diy-label-widget-block-' + blockId);
+  const widgetElement = document.getElementById('diy-label-app-embed-block-' + blockId);
   
   if (!widgetElement) return;
   
@@ -62,7 +62,7 @@
   const radius = widgetElement.getAttribute('data-radius');
   const apiUrl = widgetElement.getAttribute('data-api-url');
   
-  // Only proceed if we have a product ID (i.e., we're on a product page)
+  // Only proceed if we have a product ID
   if (!productId) {
     widgetElement.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;"><p>DIY Label widget is only available on product pages.</p></div>';
     return;
@@ -74,11 +74,13 @@
     iframe.src = apiUrl + '/widget?' + 
       'shop=' + encodeURIComponent(shopDomain) + 
       '&product=' + encodeURIComponent(productId) + 
-      '&theme=' + encodeURIComponent(theme);
+      '&theme=' + encodeURIComponent(theme) + 
+      '&radius=' + encodeURIComponent(radius);
     
     iframe.style.cssText = 'width: 100%; height: {{ block.settings.widget_height }}px; border: none; border-radius: {{ block.settings.border_radius }}px; background: transparent;';
     iframe.frameBorder = '0';
     iframe.loading = 'lazy';
+    iframe.allow = 'geolocation';
     
     // Handle iframe messages
     window.addEventListener('message', function(event) {
@@ -152,8 +154,8 @@
 
 {% schema %}
 {
-  "name": "DIY Label Widget",
-  "target": "body",
+  "name": "DIY Label App Embed",
+  "target": "section",
   "settings": [
     {
       "type": "header",

@@ -7,7 +7,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const shopDomain = url.searchParams.get('shop');
   const productId = url.searchParams.get('product');
-  const source = url.searchParams.get('source'); // 'product', 'cart', or 'checkout'
 
   // CORS headers for cross-origin requests from Shopify stores
   const corsHeaders = {
@@ -54,7 +53,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return json({
     store,
     productSettings,
-    source,
     config: {
       mapboxToken: process.env.VITE_MAPBOX_TOKEN,
       supabaseUrl: process.env.VITE_SUPABASE_URL,
@@ -66,10 +64,10 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function Widget() {
-  const { store, productSettings, source, config } = useLoaderData<typeof loader>();
+  const { store, productSettings, config } = useLoaderData<typeof loader>();
 
   // Check if DIY Label is enabled for this product
-  if (source === 'product' && productSettings && !productSettings.diy_label_enabled) {
+  if (productSettings && !productSettings.diy_label_enabled) {
     return null; // Don't render widget if not enabled
   }
 
@@ -191,15 +189,9 @@ export default function Widget() {
           <h2 style={{ margin: '0 0 24px 0', fontSize: '24px', fontWeight: '600' }}>
             🌱 Choose Local Printing
           </h2>
-          {source === 'cart' || source === 'checkout' ? (
-            <p style={{ margin: '0 0 24px 0', fontSize: '16px', color: theme === 'dark' ? '#cccccc' : '#666666' }}>
-              Choose a local print shop for your DIY Label items to reduce shipping impact and support your community.
-            </p>
-          ) : (
-            <p style={{ margin: '0 0 24px 0', fontSize: '16px', color: theme === 'dark' ? '#cccccc' : '#666666' }}>
-              Support your local community and reduce shipping impact by printing this item at a nearby shop.
-            </p>
-          )}
+          <p style={{ margin: '0 0 24px 0', fontSize: '16px', color: theme === 'dark' ? '#cccccc' : '#666666' }}>
+            Support your local community and reduce shipping impact by printing this item at a nearby shop.
+          </p>
           
           <div id="location-status" style={{ 
             display: 'inline-block',
@@ -548,34 +540,9 @@ export default function Widget() {
                 const shop = printShops[index];
                 updateStatus('Selected: ' + shop.name);
                 
-                // Handle different sources
-                if ('${source}' === 'cart' || '${source}' === 'checkout') {
-                  handleCartCheckoutSelection(shop);
-                } else {
-                  // Product page - create actual order
-                  createDIYLabelOrder(shop);
-                }
+                // Create actual order instead of just showing alert
+                createDIYLabelOrder(shop);
               };
-              
-              // Handle cart/checkout selection
-              function handleCartCheckoutSelection(printShop) {
-                updateStatus('Print shop selected: ' + printShop.name);
-                
-                // Send message to parent window (cart/checkout)
-                if (window.parent !== window) {
-                  window.parent.postMessage({
-                    type: 'diy-label-selection',
-                    printShop: printShop,
-                    source: '${source}'
-                  }, '*');
-                }
-                
-                // Show success message
-                const successMessage = 'Print shop selected: ' + printShop.name + '\\n\\n' +
-                  'Your order will be printed locally when you complete checkout.';
-                
-                alert(successMessage);
-              }
               
               // Function to create DIY Label order
               async function createDIYLabelOrder(printShop) {
