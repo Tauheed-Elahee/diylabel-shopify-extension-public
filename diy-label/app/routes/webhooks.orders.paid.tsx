@@ -37,6 +37,14 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       const customerLocation = noteAttributes.find(
         attr => attr.name === 'diy_label_customer_location'
       )?.value;
+      
+      const reusedApparel = noteAttributes.find(
+        attr => attr.name === 'diy_label_reused_apparel'
+      )?.value === 'true';
+      
+      const specialInstructions = noteAttributes.find(
+        attr => attr.name === 'diy_label_instructions'
+      )?.value;
 
       // Get store
       const { data: store } = await supabaseAdmin
@@ -46,6 +54,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         .single();
 
       if (store && printShopId) {
+        // Filter line items for DIY Label products
+        const diyLineItems = order.line_items.filter(item => {
+          return item.properties && item.properties.some(prop => 
+            prop.name === 'diy_label_enabled' && prop.value === 'true'
+          );
+        });
+        
         // Create DIY Label order record
         const { data: diyOrder, error: orderError } = await supabaseAdmin
           .from('diy_label_orders')
@@ -54,10 +69,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             shopify_store_id: store.id,
             print_shop_id: parseInt(printShopId),
             product_data: {
-              line_items: order.line_items,
+              line_items: diyLineItems.length > 0 ? diyLineItems : order.line_items,
               total_price: order.total_price,
               currency: order.currency,
-              order_number: order.order_number
+              order_number: order.order_number,
+              reused_apparel: reusedApparel,
+              special_instructions: specialInstructions
             },
             customer_data: {
               name: order.customer ? `${order.customer.first_name} ${order.customer.last_name}` : 'Unknown',
@@ -72,7 +89,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               print_shop_address: printShopAddress,
               customer_location: customerLocation ? JSON.parse(customerLocation) : null,
               created_from_webhook: true,
-              webhook_timestamp: new Date().toISOString()
+              webhook_timestamp: new Date().toISOString(),
+              source: 'checkout_extension'
             }
           })
           .select()
