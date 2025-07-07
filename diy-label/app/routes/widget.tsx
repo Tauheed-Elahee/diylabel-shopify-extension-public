@@ -1,4 +1,4 @@
-        export default function Widget() {
+export default function Widget() {
   return (
     <div style={{ 
       fontFamily: 'system-ui, -apple-system, sans-serif',

@@ -1,11 +1,9 @@
 {% comment %}
   DIY Label Global App Embed
-  This appears in Theme Customizer under App embeds
-  and loads global JavaScript for the entire site
+  Optimized version with reduced code size
 {% endcomment %}
 
 {% if block.settings.enabled %}
-<!-- DIY Label Global Configuration -->
 <script>
   console.log('DIY Label: Global app embed loaded');
   
@@ -20,15 +18,11 @@
     shopDomain: {{ shop.permanent_domain | json }}
   };
   
-  // Set default API URL if not configured
   if (!window.DIYLabelConfig.global.apiUrl) {
     window.DIYLabelConfig.global.apiUrl = 'https://spirits-plumbing-definitions-obituaries.trycloudflare.com';
   }
-  
-  console.log('DIY Label Global Config:', window.DIYLabelConfig.global);
 </script>
 
-<!-- Mapbox CSS -->
 <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
 
 {% if block.settings.auto_inject %}
@@ -36,199 +30,66 @@
 (function() {
   'use strict';
   
-  console.log('DIY Label: Auto-injection script starting...');
-  
-  // Only run on product pages or if show_on_all_products is enabled
   const isProductPage = window.location.pathname.includes('/products/');
   const showOnAllProducts = window.DIYLabelConfig.global.showOnAllProducts;
   
-  console.log('DIY Label: Page check - isProductPage:', isProductPage, 'showOnAllProducts:', showOnAllProducts);
+  if (!isProductPage && !showOnAllProducts) return;
   
-  if (!isProductPage && !showOnAllProducts) {
-    console.log('DIY Label: Skipping injection - not a product page and show_on_all_products is false');
-    return;
-  }
-  
-  // Get product identifier from page - try multiple methods
   let productIdentifier = null;
   
   if (isProductPage) {
-    // Method 1: Try to get product ID from meta tag
-    const productMeta = document.querySelector('meta[property="product:id"]');
-    if (productMeta) {
-      productIdentifier = productMeta.getAttribute('content');
-      console.log('DIY Label: Found product ID from meta tag:', productIdentifier);
-    }
-    
-    // Method 2: Try to get from Shopify global object
-    if (!productIdentifier && typeof window.ShopifyAnalytics !== 'undefined' && window.ShopifyAnalytics.meta) {
-      productIdentifier = window.ShopifyAnalytics.meta.product?.id;
-      console.log('DIY Label: Found product ID from ShopifyAnalytics:', productIdentifier);
-    }
-    
-    // Method 3: Try to get from window.meta (common in themes)
-    if (!productIdentifier && typeof window.meta !== 'undefined' && window.meta.product) {
-      productIdentifier = window.meta.product.id;
-      console.log('DIY Label: Found product ID from window.meta:', productIdentifier);
-    }
-    
-    // Method 4: Try to get from theme-specific global variables
-    if (!productIdentifier && typeof window.theme !== 'undefined' && window.theme.product) {
-      productIdentifier = window.theme.product.id;
-      console.log('DIY Label: Found product ID from window.theme:', productIdentifier);
-    }
-    
-    // Method 5: Try to get from data attributes on product form
-    if (!productIdentifier) {
-      const productForm = document.querySelector('form[action*="/cart/add"]');
-      if (productForm) {
-        const productIdInput = productForm.querySelector('input[name="id"]');
-        if (productIdInput) {
-          productIdentifier = productIdInput.value;
-          console.log('DIY Label: Found product ID from form input:', productIdentifier);
-        }
-      }
-    }
-    
-    // Method 6: Try to get from JSON-LD structured data
-    if (!productIdentifier) {
-      const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
-      for (const script of jsonLdScripts) {
-        try {
-          const data = JSON.parse(script.textContent);
-          if (data['@type'] === 'Product' && data.productID) {
-            productIdentifier = data.productID;
-            console.log('DIY Label: Found product ID from JSON-LD:', productIdentifier);
-            break;
-          }
-        } catch (e) {
-          // Ignore JSON parse errors
-        }
-      }
-    }
-    
-    // Method 7: Extract handle from URL as fallback (API will convert to ID)
-    if (!productIdentifier) {
-      const pathParts = window.location.pathname.split('/');
-      const productIndex = pathParts.indexOf('products');
-      if (productIndex !== -1 && pathParts[productIndex + 1]) {
-        const productHandle = pathParts[productIndex + 1];
-        console.log('DIY Label: Found product handle from URL:', productHandle);
-        
-        // Try to find product ID from handle using theme data
-        if (typeof window.theme !== 'undefined' && window.theme.products) {
-          const product = window.theme.products.find(p => p.handle === productHandle);
-          if (product) {
-            productIdentifier = product.id;
-            console.log('DIY Label: Converted handle to ID using theme data:', productIdentifier);
-          }
-        }
-        
-        // If we still don't have an ID, use the handle - the API will convert it
-        if (!productIdentifier) {
-          productIdentifier = productHandle;
-          console.log('DIY Label: Using product handle (API will convert to ID):', productIdentifier);
-        }
-      }
+    const pathParts = window.location.pathname.split('/');
+    const productIndex = pathParts.indexOf('products');
+    if (productIndex !== -1 && pathParts[productIndex + 1]) {
+      productIdentifier = pathParts[productIndex + 1];
     }
   }
   
-  // Function to check if DIY Label is enabled for this product
-  async function checkProductSettings(productIdentifier) {
-    if (!productIdentifier) {
-      console.log('DIY Label: No product identifier provided to checkProductSettings');
-      return false;
-    }
+  async function checkProductSettings(productId) {
+    if (!productId) return false;
     
     try {
-      console.log('DIY Label: Checking if enabled for specific product:', productIdentifier);
       const response = await fetch(
         window.DIYLabelConfig.global.apiUrl + '/api/product-settings?shop=' + 
         encodeURIComponent(window.DIYLabelConfig.global.shopDomain) + 
-        '&product=' + encodeURIComponent(productIdentifier)
+        '&product=' + encodeURIComponent(productId)
       );
       
-      if (!response.ok) {
-        console.log('DIY Label: Product settings API response not OK:', response.status);
-        return false;
-      }
-      
+      if (!response.ok) return false;
       const data = await response.json();
-      console.log('DIY Label: Product settings response:', data);
       return data.enabled || false;
     } catch (error) {
-      console.error('DIY Label: Error checking product settings:', error);
       return false;
     }
   }
   
-  // Function to create and inject the widget
-  function createWidget(productIdentifier) {
-    console.log('DIY Label: Creating widget for product:', productIdentifier);
+  function createWidget(productId) {
+    if (document.getElementById('diy-label-shopify-button')) return;
     
-    // Check if widget already exists
-    if (document.getElementById('diy-label-shopify-button')) {
-      console.log('DIY Label: Widget already exists, skipping');
-      return;
-    }
-    
-    // Find a good place to inject the widget
-    let targetElement = null;
-    
-    // Try common selectors for product forms
     const selectors = [
       '.product-form',
       '.product__form',
-      '.product-single__form',
       '[data-product-form]',
-      '.shopify-product-form',
-      '.product-form-container',
-      '.product-form__buttons',
-      '.product-form__cart',
-      '.shopify-payment-button',
-      '.product__info',
-      '.product-info',
-      '.product-details',
-      '.product__content',
-      '.product-content'
+      '.shopify-product-form'
     ];
     
+    let targetElement = null;
     for (const selector of selectors) {
       targetElement = document.querySelector(selector);
-      if (targetElement) {
-        console.log('DIY Label: Found target element with selector:', selector);
-        break;
-      }
+      if (targetElement) break;
     }
     
-    // Fallback: try to find any form with product in the action
-    if (!targetElement) {
-      const forms = document.querySelectorAll('form');
-      for (const form of forms) {
-        if (form.action && form.action.includes('/cart/add')) {
-          targetElement = form.parentElement;
-          console.log('DIY Label: Found target element via cart form');
-          break;
-        }
-      }
-    }
-    
-    // Last resort: append to main content area
     if (!targetElement) {
       targetElement = document.querySelector('main') || document.body;
-      console.log('DIY Label: Using fallback target element:', targetElement.tagName);
     }
     
-    // Create Shopify-style button
     const buttonContainer = document.createElement('div');
     buttonContainer.id = 'diy-label-shopify-button-container';
     buttonContainer.style.cssText = 'margin: 16px 0; width: 100%;';
     
-    // Create the Shopify-style button
     const shopifyButton = document.createElement('button');
     shopifyButton.id = 'diy-label-shopify-button';
     shopifyButton.type = 'button';
-    shopifyButton.className = 'shopify-payment-button__button shopify-payment-button__button--unbranded';
     shopifyButton.style.cssText = `
       width: 100%;
       background-color: #007cba;
@@ -238,21 +99,11 @@
       padding: 16px 24px;
       font-size: 16px;
       font-weight: 600;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       cursor: pointer;
       transition: background-color 0.2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      min-height: 44px;
-      text-align: center;
-      line-height: 1.2;
     `;
-    
     shopifyButton.innerHTML = '🌱 Choose Local Printing';
     
-    // Add hover effect
     shopifyButton.addEventListener('mouseenter', function() {
       this.style.backgroundColor = '#005a8b';
     });
@@ -261,40 +112,25 @@
       this.style.backgroundColor = '#007cba';
     });
     
-    // Add click handler to open modal
     shopifyButton.addEventListener('click', function() {
-      openDIYLabelModal(productIdentifier);
+      openDIYLabelModal(productId);
     });
     
     buttonContainer.appendChild(shopifyButton);
     
-    // Insert widget after the target element
     if (targetElement.parentNode) {
       targetElement.parentNode.insertBefore(buttonContainer, targetElement.nextSibling);
-      console.log('DIY Label: Button inserted after target element');
     } else {
       targetElement.appendChild(buttonContainer);
-      console.log('DIY Label: Button appended to target element');
     }
   }
   
-  // Global variables for modal functionality
-  let map = null;
-  let userLocation = null;
-  let printShops = [];
-  let widgetData = null;
-  
-  // Function to open DIY Label modal
-  function openDIYLabelModal(productIdentifier) {
-    console.log('DIY Label: Opening modal for product:', productIdentifier);
-    
-    // Check if modal already exists
+  function openDIYLabelModal(productId) {
     if (document.getElementById('diy-label-modal')) {
       document.getElementById('diy-label-modal').style.display = 'flex';
       return;
     }
     
-    // Create modal
     const modal = document.createElement('div');
     modal.id = 'diy-label-modal';
     modal.style.cssText = `
@@ -312,7 +148,6 @@
       box-sizing: border-box;
     `;
     
-    // Create modal content
     const modalContent = document.createElement('div');
     modalContent.style.cssText = `
       background: white;
@@ -327,7 +162,6 @@
       flex-direction: column;
     `;
     
-    // Create modal header
     const modalHeader = document.createElement('div');
     modalHeader.style.cssText = `
       padding: 20px 24px;
@@ -339,13 +173,8 @@
     `;
     
     const modalTitle = document.createElement('h2');
-    modalTitle.style.cssText = `
-      margin: 0;
-      font-size: 20px;
-      font-weight: 600;
-      color: #333333;
-    `;
-    modalTitle.textContent = '🌱 Choose Local Printing';
+    modalTitle.style.cssText = 'margin: 0; font-size: 20px; font-weight: 600; color: #333333;';
+    modalTitle.textContent = '🌱 Choose Local Print Shop';
     
     const closeButton = document.createElement('button');
     closeButton.style.cssText = `
@@ -356,568 +185,95 @@
       color: #666666;
       padding: 4px;
       border-radius: 4px;
-      transition: background-color 0.2s;
     `;
     closeButton.innerHTML = '×';
     closeButton.addEventListener('click', function() {
       modal.style.display = 'none';
     });
     
-    closeButton.addEventListener('mouseenter', function() {
-      this.style.backgroundColor = '#f0f0f0';
-    });
-    
-    closeButton.addEventListener('mouseleave', function() {
-      this.style.backgroundColor = 'transparent';
-    });
-    
     modalHeader.appendChild(modalTitle);
     modalHeader.appendChild(closeButton);
     
-    // Create modal body
     const modalBody = document.createElement('div');
-    modalBody.style.cssText = `
-      flex: 1;
-      overflow-y: auto;
-      padding: 24px;
-      min-height: 500px;
-    `;
+    modalBody.style.cssText = 'flex: 1; overflow-y: auto; padding: 0;';
     
-    // Initialize widget content
-    initializeWidgetContent(modalBody, productIdentifier);
+    const iframe = document.createElement('iframe');
+    iframe.src = window.DIYLabelConfig.global.apiUrl + '/widget?' + 
+      'shop=' + encodeURIComponent(window.DIYLabelConfig.global.shopDomain) + 
+      '&product=' + encodeURIComponent(productId) +
+      '&theme=' + encodeURIComponent(window.DIYLabelConfig.global.theme);
+    iframe.style.cssText = 'width: 100%; height: 600px; border: none; background: white;';
+    iframe.frameBorder = '0';
+    iframe.loading = 'lazy';
     
-    // Assemble modal
+    window.addEventListener('message', function(event) {
+      if (event.origin !== window.DIYLabelConfig.global.apiUrl) return;
+      
+      if (event.data.type === 'diy-label-resize') {
+        iframe.style.height = Math.max(600, event.data.height) + 'px';
+      }
+      
+      if (event.data.type === 'diy-label-selection') {
+        const printShop = event.data.printShop;
+        
+        // Update cart attributes
+        updateCartAttributes(printShop);
+        
+        // Close modal
+        modal.style.display = 'none';
+      }
+    });
+    
+    modalBody.appendChild(iframe);
     modalContent.appendChild(modalHeader);
     modalContent.appendChild(modalBody);
     modal.appendChild(modalContent);
     
-    // Add modal to page
     document.body.appendChild(modal);
     
-    // Close modal when clicking outside content
     modal.addEventListener('click', function(e) {
       if (e.target === modal) {
         modal.style.display = 'none';
       }
     });
-    
-    // Close modal with Escape key
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape' && modal.style.display === 'flex') {
-        modal.style.display = 'none';
-      }
-    });
   }
   
-  // Function to initialize widget content
-  async function initializeWidgetContent(container, productIdentifier) {
-    // Show loading state
-    container.innerHTML = `
-      <div style="text-align: center; padding: 40px 20px;">
-        <h3 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600;">
-          🌱 Choose Local Printing
-        </h3>
-        <p style="margin: 0 0 24px 0; font-size: 16px; color: #666;">
-          Support your local community and reduce shipping impact by printing this item at a nearby shop.
-        </p>
-        <div id="location-status" style="display: inline-block; padding: 12px 24px; background: #f5f5f5; border-radius: 6px; margin-bottom: 16px;">
-          <p style="margin: 0; font-size: 14px; font-weight: 500;">📍 Getting your location...</p>
-        </div>
-        <div id="location-error" style="display: none;"></div>
-        <div id="map-container" style="width: 100%; height: 400px; border-radius: 8px; background: #f8f9fa; border: 1px solid #ddd; display: none; margin-bottom: 20px; position: relative; overflow: hidden;">
-          <div id="map" style="width: 100%; height: 100%; border-radius: 8px; position: absolute; top: 0; left: 0;"></div>
-        </div>
-        <div id="shops-list" style="display: none;">
-          <h4 style="margin: 20px 0 10px 0; font-size: 16px; font-weight: 600;">Nearby Print Shops</h4>
-          <div id="shops-container"></div>
-        </div>
-      </div>
-    `;
-    
-    // Start location request immediately
-    try {
-      await requestLocationAndLoadShops(productIdentifier);
-    } catch (error) {
-      console.error('Error initializing widget:', error);
-      showLocationError('Failed to initialize widget');
-    }
-  }
-  
-  // Function to request location and load shops
-  async function requestLocationAndLoadShops(productIdentifier) {
-    try {
-      // Get user location
-      userLocation = await getUserLocation();
-      console.log('DIY Label: Got user location:', userLocation);
-      
-      // Fetch widget data including print shops
-      widgetData = await fetchWidgetData(productIdentifier, userLocation);
-      console.log('DIY Label: Got widget data:', widgetData);
-      
-      if (widgetData.printShops && widgetData.printShops.length > 0) {
-        printShops = widgetData.printShops;
-        
-        // Initialize map
-        await initializeMap(userLocation);
-        
-        // Display print shops
-        displayPrintShops(printShops);
-        
-        updateStatus(`Found ${printShops.length} print shops near you`);
-      } else {
-        updateStatus('No print shops found in your area');
-        showLocationError('No print shops found within 25 miles. Try a different location or check back later.');
-      }
-      
-    } catch (error) {
-      console.error('Error loading shops:', error);
-      showLocationError(error.message);
-    }
-  }
-  
-  // Function to get user location
-  function getUserLocation() {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error('Geolocation is not supported by this browser'));
-        return;
-      }
-      
-      updateStatus('Getting your location...', true);
-      
-      const options = {
-        enableHighAccuracy: true,
-        timeout: 8000,
-        maximumAge: 300000
-      };
-      
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          resolve({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.error('Geolocation error:', error);
-          let errorMessage = 'Location access failed';
-          
-          switch(error.code) {
-            case error.PERMISSION_DENIED:
-              errorMessage = 'Location access denied by user';
-              break;
-            case error.POSITION_UNAVAILABLE:
-              errorMessage = 'Location information unavailable';
-              break;
-            case error.TIMEOUT:
-              errorMessage = 'Location request timed out';
-              break;
-          }
-          
-          reject(new Error(errorMessage));
-        },
-        options
-      );
-    });
-  }
-  
-  // Function to fetch widget data
-  async function fetchWidgetData(productIdentifier, location) {
-    const params = new URLSearchParams({
-      shop: window.DIYLabelConfig.global.shopDomain,
-      product: productIdentifier,
-      lat: location.lat.toString(),
-      lng: location.lng.toString(),
-      radius: window.DIYLabelConfig.global.searchRadius.toString()
-    });
-    
-    const response = await fetch(
-      window.DIYLabelConfig.global.apiUrl + '/api/widget-data?' + params.toString()
-    );
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch widget data');
-    }
-    
-    return await response.json();
-  }
-  
-  // Function to initialize map
-  async function initializeMap(location) {
-    if (!widgetData.config.mapboxToken) {
-      console.error('Mapbox token not configured');
-      return;
-    }
-    
-    // Load Mapbox GL JS if not already loaded
-    if (typeof mapboxgl === 'undefined') {
-      await loadMapboxGL();
-    }
-    
-    mapboxgl.accessToken = widgetData.config.mapboxToken;
-    
-    const mapContainer = document.getElementById('map');
-    if (!mapContainer) return;
-    
-    map = new mapboxgl.Map({
-      container: 'map',
-      style: widgetData.config.theme === 'dark' ? 'mapbox://styles/mapbox/dark-v10' : 'mapbox://styles/mapbox/light-v10',
-      center: [location.lng, location.lat],
-      zoom: 11,
-      attributionControl: true
-    });
-    
-    map.on('load', function() {
-      console.log('Map loaded successfully');
-      
-      // Add user location marker
-      new mapboxgl.Marker({ color: '#007cba' })
-        .setLngLat([location.lng, location.lat])
-        .setPopup(new mapboxgl.Popup().setHTML('<strong>Your Location</strong>'))
-        .addTo(map);
-      
-      // Add print shop markers
-      addPrintShopMarkers(printShops);
-      
-      // Show map container
-      document.getElementById('map-container').style.display = 'block';
-      
-      // Resize map after showing
-      setTimeout(() => {
-        map.resize();
-      }, 100);
-    });
-  }
-  
-  // Function to load Mapbox GL JS
-  function loadMapboxGL() {
-    return new Promise((resolve, reject) => {
-      if (typeof mapboxgl !== 'undefined') {
-        resolve();
-        return;
-      }
-      
-      const script = document.createElement('script');
-      script.src = 'https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js';
-      script.onload = resolve;
-      script.onerror = reject;
-      document.head.appendChild(script);
-    });
-  }
-  
-  // Function to add print shop markers
-  function addPrintShopMarkers(shops) {
-    if (!map) return;
-    
-    shops.forEach((shop, index) => {
-      const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(
-        '<div style="padding: 10px; max-width: 200px;">' +
-          '<h4 style="margin: 0 0 8px 0; font-size: 14px;">' + shop.name + '</h4>' +
-          '<p style="margin: 0 0 4px 0; font-size: 12px; color: #666;">' + shop.address + '</p>' +
-          '<p style="margin: 0 0 8px 0; font-size: 12px;">' + shop.specialty + '</p>' +
-          '<p style="margin: 0; font-size: 12px;"><strong>Rating:</strong> ' + shop.rating + '/5</p>' +
-          '<button onclick="window.selectPrintShop(' + index + ')" style="margin-top: 8px; padding: 6px 12px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Select This Shop</button>' +
-        '</div>'
-      );
-      
-      new mapboxgl.Marker({ color: '#28a745' })
-        .setLngLat([shop.lng, shop.lat])
-        .setPopup(popup)
-        .addTo(map);
-    });
-    
-    // Fit map to show all markers
-    if (shops.length > 0) {
-      const bounds = new mapboxgl.LngLatBounds();
-      
-      bounds.extend([userLocation.lng, userLocation.lat]);
-      
-      shops.forEach(shop => {
-        bounds.extend([shop.lng, shop.lat]);
-      });
-      
-      map.fitBounds(bounds, { padding: 50 });
-    }
-  }
-  
-  // Function to display print shops list
-  function displayPrintShops(shops) {
-    const shopsContainer = document.getElementById('shops-container');
-    if (!shopsContainer) return;
-    
-    if (shops.length === 0) {
-      shopsContainer.innerHTML = '<p style="text-align: center; color: #666;">No print shops found within 25 miles.</p>';
-      return;
-    }
-    
-    const shopsHtml = shops.map((shop, index) => 
-      '<div style="border: 1px solid #ddd; border-radius: 8px; padding: 16px; margin-bottom: 12px; background: white;">' +
-        '<div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">' +
-          '<h4 style="margin: 0; font-size: 16px; font-weight: 600;">' + shop.name + '</h4>' +
-          '<span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px;">⭐ ' + shop.rating + '</span>' +
-        '</div>' +
-        '<p style="margin: 0 0 4px 0; color: #666; font-size: 14px;">' + shop.address + '</p>' +
-        '<p style="margin: 0 0 8px 0; font-size: 14px;">' + shop.specialty + '</p>' +
-        '<p style="margin: 0 0 12px 0; font-size: 12px; color: #888;">Distance: ' + (shop.distance_km ? shop.distance_km.toFixed(1) + ' km' : 'Unknown') + '</p>' +
-        '<button onclick="window.selectPrintShop(' + index + ')" style="width: 100%; padding: 10px; background: #007cba; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">Select This Print Shop</button>' +
-      '</div>'
-    ).join('');
-    
-    shopsContainer.innerHTML = shopsHtml;
-    document.getElementById('shops-list').style.display = 'block';
-  }
-  
-  // Function to select a print shop
-  window.selectPrintShop = function(index) {
-    const shop = printShops[index];
-    updateStatus('Selected: ' + shop.name);
-    
-    // Update cart attributes instead of creating order immediately
-    updateCartAttributes(shop);
-  };
-  
-  // Function to update cart attributes
   async function updateCartAttributes(printShop) {
     try {
-      updateStatus('Saving print shop selection...', true);
-      
       const cartData = {
         attributes: {
           'diy_label_enabled': 'true',
           'diy_label_print_shop_id': printShop.id.toString(),
           'diy_label_print_shop_name': printShop.name,
-          'diy_label_print_shop_address': printShop.address,
-          'diy_label_customer_location': JSON.stringify(userLocation)
+          'diy_label_print_shop_address': printShop.address
         }
       };
       
       const response = await fetch('/cart/update.js', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cartData)
       });
       
       if (response.ok) {
-        // 1. Scroll modal to top
-        const modal = document.getElementById('diy-label-modal');
-        if (modal) {
-          const modalBody = modal.querySelector('.modal-body');
-          if (modalBody) {
-            modalBody.scrollTop = 0;
-          }
-        }
-        
-        // 2. Show success alert
-        const successMessage = 'Print shop selected: ' + printShop.name + '\\n\\n' +
-          'Your order will be printed locally when you complete checkout!';
-        
-        alert(successMessage);
-        
-        // 3. Update status with print shop name
-        updateStatus('Selected: ' + printShop.name, false);
-        
-        // 4. Add cart buttons below status
-        addCartButtons();
-        
-        // 5. Auto-close modal after 5 seconds
-        setTimeout(function() {
-          const modal = document.getElementById('diy-label-modal');
-          if (modal) {
-            modal.style.display = 'none';
-          }
-        }, 5000);
-      } else {
-        throw new Error('Failed to update cart');
+        alert('Print shop selected: ' + printShop.name + '\\n\\nYour order will be printed locally!');
       }
-      
     } catch (error) {
-      console.error('Error updating cart attributes:', error);
-      updateStatus('Failed to save selection');
-      alert('Error saving print shop selection: ' + error.message);
+      console.error('Error updating cart:', error);
     }
   }
   
-  // Function to add cart buttons
-  function addCartButtons() {
-    const statusElement = document.getElementById('location-status-' + blockId);
-    if (!statusElement) return;
-    
-    // Check if buttons already exist
-    if (document.getElementById('diy-label-cart-buttons-' + blockId)) return;
-    
-    // Create buttons container
-    const buttonsContainer = document.createElement('div');
-    buttonsContainer.id = 'diy-label-cart-buttons-' + blockId;
-    buttonsContainer.style.cssText = `
-      margin-top: 20px;
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    `;
-    
-    // Create Add to Cart button
-    const addToCartBtn = document.createElement('button');
-    addToCartBtn.style.cssText = `
-      flex: 1;
-      min-width: 140px;
-      padding: 12px 24px;
-      background: #007cba;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    `;
-    addToCartBtn.textContent = '🛒 Add to Cart';
-    addToCartBtn.addEventListener('mouseenter', function() {
-      this.style.backgroundColor = '#005a8b';
-    });
-    addToCartBtn.addEventListener('mouseleave', function() {
-      this.style.backgroundColor = '#007cba';
-    });
-    addToCartBtn.addEventListener('click', function() {
-      handleAddToCart();
-    });
-    
-    // Create Buy It Now button
-    const buyNowBtn = document.createElement('button');
-    buyNowBtn.style.cssText = `
-      flex: 1;
-      min-width: 140px;
-      padding: 12px 24px;
-      background: #28a745;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    `;
-    buyNowBtn.textContent = '⚡ Buy It Now';
-    buyNowBtn.addEventListener('mouseenter', function() {
-      this.style.backgroundColor = '#1e7e34';
-    });
-    buyNowBtn.addEventListener('mouseleave', function() {
-      this.style.backgroundColor = '#28a745';
-    });
-    buyNowBtn.addEventListener('click', function() {
-      handleBuyNow();
-    });
-    
-    // Add buttons to container
-    buttonsContainer.appendChild(addToCartBtn);
-    buttonsContainer.appendChild(buyNowBtn);
-    
-    // Insert after status element
-    statusElement.parentNode.insertBefore(buttonsContainer, statusElement.nextSibling);
-  }
-  
-  // Function to handle Add to Cart
-  function handleAddToCart() {
-    // Close modal immediately
-    const modal = document.getElementById('diy-label-modal');
-    if (modal) {
-      modal.style.display = 'none';
-    }
-    
-    // Find and trigger the actual Add to Cart button on the page
-    const productForm = document.querySelector('form[action*="/cart/add"]');
-    if (productForm) {
-      const addToCartButton = productForm.querySelector('button[type="submit"], input[type="submit"]');
-      if (addToCartButton) {
-        addToCartButton.click();
-      } else {
-        // Fallback: submit the form directly
-        productForm.submit();
-      }
-    } else {
-      // Fallback: try to find any add to cart button
-      const addToCartBtn = document.querySelector('[data-add-to-cart], .add-to-cart, .btn-add-to-cart');
-      if (addToCartBtn) {
-        addToCartBtn.click();
-      } else {
-        alert('Add to cart functionality not found. Please add the item to cart manually.');
-      }
-    }
-  }
-  
-  // Function to handle Buy It Now
-  function handleBuyNow() {
-    // Close modal immediately
-    const modal = document.getElementById('diy-label-modal');
-    if (modal) {
-      modal.style.display = 'none';
-    }
-    
-    // Find and trigger Buy It Now button or redirect to checkout
-    const buyNowButton = document.querySelector('.shopify-payment-button button, [data-buy-now], .buy-now, .btn-buy-now');
-    if (buyNowButton) {
-      buyNowButton.click();
-    } else {
-      // Fallback: add to cart and redirect to checkout
-      handleAddToCart();
-      setTimeout(() => {
-        window.location.href = '/checkout';
-      }, 500);
-    }
-  }
-  
-  // Helper functions
-  function updateStatus(message, isLoading = false) {
-    const statusElement = document.getElementById('location-status');
-    if (statusElement) {
-      statusElement.innerHTML = '<p style="margin: 0; font-size: 14px; font-weight: 500;">' + 
-        (isLoading ? '⏳ ' : '📍 ') + message + '</p>';
-    }
-  }
-  
-  function showLocationError(errorMessage) {
-    updateStatus('Location access failed', false);
-    const errorElement = document.getElementById('location-error');
-    if (errorElement) {
-      errorElement.style.display = 'block';
-      errorElement.innerHTML = `
-        <div style="background: #fee8e8; border: 1px solid #fcc; border-radius: 8px; padding: 16px; margin: 16px 0; color: #d32f2f;">
-          <h4 style="margin: 0 0 10px 0; font-size: 16px;">📍 Location Access Needed</h4>
-          <p style="margin: 0; font-size: 14px;">${errorMessage}</p>
-        </div>
-      `;
-    }
-  }
-  
-  // Main initialization function
   async function initializeDIYLabel() {
-    console.log('DIY Label: Initializing auto-injection...');
+    if (!productIdentifier) return;
     
-    if (!productIdentifier) {
-      console.log('DIY Label: No product identifier found, skipping widget');
-      return;
-    }
-    
-    // Check if DIY Label is enabled for this product (unless show on all products is enabled)
-    if (!showOnAllProducts) {
-      console.log('DIY Label: Checking if enabled for specific product:', productIdentifier);
+    if (!window.DIYLabelConfig.global.showOnAllProducts) {
       const isEnabled = await checkProductSettings(productIdentifier);
-      console.log('DIY Label: Product enabled check result:', isEnabled);
-      if (!isEnabled) {
-        console.log('DIY Label: Not enabled for this product, skipping widget');
-        return;
-      }
-    } else {
-      console.log('DIY Label: Show on all products is enabled, skipping product check');
+      if (!isEnabled) return;
     }
     
-    // Create and inject the widget
-    console.log('DIY Label: Creating widget for product:', productIdentifier);
     createWidget(productIdentifier);
   }
   
-  // Initialize when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeDIYLabel);
   } else {
@@ -929,9 +285,8 @@
 {% endif %}
 
 {% else %}
-<!-- DIY Label App Embed: NOT enabled -->
 <script>
-  console.log('DIY Label: Global app embed NOT enabled in theme customizer');
+  console.log('DIY Label: Global app embed NOT enabled');
 </script>
 {% endif %}
 
@@ -944,14 +299,12 @@
       "type": "checkbox",
       "id": "enabled",
       "label": "Enable DIY Label",
-      "default": true,
-      "info": "Enable DIY Label functionality across your store"
+      "default": true
     },
     {
       "type": "checkbox",
       "id": "auto_inject",
       "label": "Auto-inject on Product Pages",
-      "info": "Automatically add widget to product pages when enabled",
       "default": true
     },
     {
@@ -959,18 +312,9 @@
       "id": "theme",
       "label": "Widget Theme",
       "options": [
-        {
-          "value": "light",
-          "label": "Light"
-        },
-        {
-          "value": "dark",
-          "label": "Dark"
-        },
-        {
-          "value": "auto",
-          "label": "Auto"
-        }
+        { "value": "light", "label": "Light" },
+        { "value": "dark", "label": "Dark" },
+        { "value": "auto", "label": "Auto" }
       ],
       "default": "light"
     },
@@ -981,21 +325,18 @@
       "min": 5,
       "max": 100,
       "step": 5,
-      "default": 25,
-      "info": "How far customers can search for print shops"
+      "default": 25
     },
     {
       "type": "checkbox",
       "id": "show_on_all_products",
       "label": "Show on All Products",
-      "info": "Display widget on all products (otherwise only enabled products)",
       "default": false
     },
     {
       "type": "url",
       "id": "api_url",
-      "label": "API URL",
-      "info": "DIY Label API endpoint (configure in theme customizer)"
+      "label": "API URL"
     }
   ]
 }
