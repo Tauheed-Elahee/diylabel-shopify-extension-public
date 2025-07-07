@@ -424,10 +424,170 @@
       });
       
       if (response.ok) {
-        showSuccessMessage(printShop.name);
+        // 1. Scroll modal to top
+        const modal = document.getElementById('diy-label-modal-' + blockId);
+        if (modal) {
+          const modalBody = modal.querySelector('div[style*="overflow-y: auto"]');
+          if (modalBody) {
+            modalBody.scrollTop = 0;
+          }
+        }
+        
+        // 2. Show success alert
+        const successMessage = 'Print shop selected: ' + printShop.name + '\\n\\n' +
+          'Your order will be printed locally when you complete checkout!';
+        
+        alert(successMessage);
+        
+        // 3. Update modal content with selection and buttons
+        updateModalWithSelection(printShop);
+        
+        // 4. Auto-close modal after 5 seconds
+        setTimeout(function() {
+          const modal = document.getElementById('diy-label-modal-' + blockId);
+          if (modal) {
+            document.body.removeChild(modal);
+          }
+        }, 5000);
       }
     } catch (error) {
       console.error('Error updating cart:', error);
+    }
+  }
+  
+  // Function to update modal with selection and cart buttons
+  function updateModalWithSelection(printShop) {
+    const modal = document.getElementById('diy-label-modal-' + blockId);
+    if (!modal) return;
+    
+    const modalBody = modal.querySelector('div[style*="overflow-y: auto"]');
+    if (!modalBody) return;
+    
+    // Create new content
+    const newContent = document.createElement('div');
+    newContent.style.cssText = 'padding: 24px; text-align: center;';
+    
+    newContent.innerHTML = `
+      <h3 style="margin: 0 0 16px 0; font-size: 24px; font-weight: 600; color: #28a745;">
+        ✅ Print Shop Selected
+      </h3>
+      <div id="location-status-${blockId}" style="display: inline-block; padding: 12px 24px; background: #e8f5e8; border-radius: 6px; margin-bottom: 20px;">
+        <p style="margin: 0; font-size: 16px; font-weight: 600; color: #28a745;">
+          📍 Selected: ${printShop.name}
+        </p>
+      </div>
+      <div id="diy-label-cart-buttons-${blockId}" style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+        <button id="add-to-cart-btn-${blockId}" style="
+          flex: 1;
+          min-width: 140px;
+          max-width: 200px;
+          padding: 12px 24px;
+          background: #007cba;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        ">🛒 Add to Cart</button>
+        <button id="buy-now-btn-${blockId}" style="
+          flex: 1;
+          min-width: 140px;
+          max-width: 200px;
+          padding: 12px 24px;
+          background: #28a745;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        ">⚡ Buy It Now</button>
+      </div>
+    `;
+    
+    // Replace modal body content
+    modalBody.innerHTML = '';
+    modalBody.appendChild(newContent);
+    
+    // Add event listeners
+    const addToCartBtn = document.getElementById('add-to-cart-btn-' + blockId);
+    const buyNowBtn = document.getElementById('buy-now-btn-' + blockId);
+    
+    if (addToCartBtn) {
+      addToCartBtn.addEventListener('mouseenter', function() {
+        this.style.backgroundColor = '#005a8b';
+      });
+      addToCartBtn.addEventListener('mouseleave', function() {
+        this.style.backgroundColor = '#007cba';
+      });
+      addToCartBtn.addEventListener('click', function() {
+        handleAddToCart();
+      });
+    }
+    
+    if (buyNowBtn) {
+      buyNowBtn.addEventListener('mouseenter', function() {
+        this.style.backgroundColor = '#1e7e34';
+      });
+      buyNowBtn.addEventListener('mouseleave', function() {
+        this.style.backgroundColor = '#28a745';
+      });
+      buyNowBtn.addEventListener('click', function() {
+        handleBuyNow();
+      });
+    }
+  }
+  
+  // Function to handle Add to Cart
+  function handleAddToCart() {
+    // Close modal immediately
+    const modal = document.getElementById('diy-label-modal-' + blockId);
+    if (modal) {
+      document.body.removeChild(modal);
+    }
+    
+    // Find and trigger the actual Add to Cart button on the page
+    const productForm = document.querySelector('form[action*="/cart/add"]');
+    if (productForm) {
+      const addToCartButton = productForm.querySelector('button[type="submit"], input[type="submit"]');
+      if (addToCartButton) {
+        addToCartButton.click();
+      } else {
+        // Fallback: submit the form directly
+        productForm.submit();
+      }
+    } else {
+      // Fallback: try to find any add to cart button
+      const addToCartBtn = document.querySelector('[data-add-to-cart], .add-to-cart, .btn-add-to-cart');
+      if (addToCartBtn) {
+        addToCartBtn.click();
+      } else {
+        alert('Add to cart functionality not found. Please add the item to cart manually.');
+      }
+    }
+  }
+  
+  // Function to handle Buy It Now
+  function handleBuyNow() {
+    // Close modal immediately
+    const modal = document.getElementById('diy-label-modal-' + blockId);
+    if (modal) {
+      document.body.removeChild(modal);
+    }
+    
+    // Find and trigger Buy It Now button or redirect to checkout
+    const buyNowButton = document.querySelector('.shopify-payment-button button, [data-buy-now], .buy-now, .btn-buy-now');
+    if (buyNowButton) {
+      buyNowButton.click();
+    } else {
+      // Fallback: add to cart and redirect to checkout
+      handleAddToCart();
+      setTimeout(() => {
+        window.location.href = '/checkout';
+      }, 500);
     }
   }
   
