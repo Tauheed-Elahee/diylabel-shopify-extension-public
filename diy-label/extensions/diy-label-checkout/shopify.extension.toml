@@ -19,17 +19,5 @@ module = "./src/ThankYou.tsx"
 network_access = true
 block_progress = false
 
-[extensions.settings]
-[[extensions.settings.fields]]
-key = "enable_sustainability_messaging"
-type = "boolean"
-name = "Show sustainability impact"
-description = "Display environmental benefits of local printing"
-default = true
-
-[[extensions.settings.fields]]
-key = "allow_print_shop_changes"
-type = "boolean"
-name = "Allow print shop changes in checkout"
-description = "Let customers change their print shop selection during checkout"
-default = true
+# Settings removed temporarily to fix deployment
+# Will add back once we determine correct schema
