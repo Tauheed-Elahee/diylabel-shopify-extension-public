@@ -1,0 +1,27 @@
+# Learn more about configuring your extension at https://shopify.dev/docs/apps/app-extensions/configuration
+
+api_version = "2025-04"
+
+[[extensions]]
+type = "checkout_ui_extension"
+name = "DIY Label Checkout"
+handle = "diy-label-checkout"
+
+[extensions.capabilities]
+network_access = true
+block_progress = false
+
+[extensions.settings]
+[[extensions.settings.fields]]
+key = "enable_sustainability_messaging"
+type = "boolean"
+name = "Show sustainability impact"
+description = "Display environmental benefits of local printing"
+default_value = true
+
+[[extensions.settings.fields]]
+key = "allow_print_shop_changes"
+type = "boolean"
+name = "Allow print shop changes in checkout"
+description = "Let customers change their print shop selection during checkout"
+default_value = true

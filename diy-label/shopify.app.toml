@@ -29,6 +29,13 @@ api_version = "2025-04"
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "write_products,read_products,read_orders,write_orders"
 
+[extensions]
+# Theme App Extension for product pages
+theme_app_extension = "extensions/diy-label"
+
+# Checkout Extension for checkout process
+checkout_ui_extension = "extensions/diy-label-checkout"
+
 [auth]
 redirect_urls = ["https://robots-worse-latex-synopsis.trycloudflare.com/auth/callback", "https://robots-worse-latex-synopsis.trycloudflare.com/auth/shopify/callback", "https://robots-worse-latex-synopsis.trycloudflare.com/api/auth/callback"]
 
