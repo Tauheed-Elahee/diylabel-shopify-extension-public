@@ -25,11 +25,11 @@ key = "enable_sustainability_messaging"
 type = "boolean"
 name = "Show sustainability impact"
 description = "Display environmental benefits of local printing"
-default_value = true
+default = true
 
 [[extensions.settings.fields]]
 key = "allow_print_shop_changes"
 type = "boolean"
 name = "Allow print shop changes in checkout"
 description = "Let customers change their print shop selection during checkout"
-default_value = true
+default = true
