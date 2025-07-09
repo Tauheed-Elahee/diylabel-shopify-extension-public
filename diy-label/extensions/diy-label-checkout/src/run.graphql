@@ -1,7 +1,23 @@
 query RunInput {
   cart {
+    id
     lines {
       id
+      quantity
+      merchandise {
+        ... on ProductVariant {
+          id
+          product {
+            id
+            handle
+            tags
+          }
+        }
+      }
+    }
+    attributes {
+      key
+      value
     }
   }
   fulfillmentGroups {
@@ -19,10 +35,15 @@ query RunInput {
     name
     address {
       address1
+      address2
+      city
+      provinceCode
+      countryCode
+      zip
     }
   }
   deliveryOptionGenerator {
-    metafield: metafield(namespace: "$app:local-pickup-options-generator", key: "pickup-ids") {
+    metafield: metafield(namespace: "$app:diy-label", key: "config") {
       value
     }
   }

@@ -5,7 +5,6 @@ name = "t:name"
 handle = "diy-label-checkout"
 type = "function"
 
-
   [[extensions.targeting]]
   target = "purchase.local-pickup-delivery-option-generator.run"
   input_query = "src/run.graphql"
@@ -18,3 +17,25 @@ type = "function"
   [extensions.ui.paths]
   create = "/"
   details = "/"
+
+  [extensions.settings]
+  [[extensions.settings.fields]]
+  key = "enabled"
+  type = "boolean"
+  name = "Enable DIY Label Pickup Options"
+  description = "Generate pickup options for locally printed orders"
+  default = true
+
+  [[extensions.settings.fields]]
+  key = "default_pickup_time"
+  type = "single_line_text_field"
+  name = "Default Pickup Time"
+  description = "Default time estimate when print shop doesn't specify"
+  default = "2-3 business days"
+
+  [[extensions.settings.fields]]
+  key = "sustainability_message"
+  type = "boolean"
+  name = "Show Sustainability Message"
+  description = "Include environmental impact messaging in pickup instructions"
+  default = true
