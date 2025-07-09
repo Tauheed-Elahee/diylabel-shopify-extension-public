@@ -479,13 +479,16 @@
       modalBody.scrollTop = 0;
     }
     
-    // 2. Show alert
-    alert('Print shop selected: ' + shop.name + '\\n\\nYour order will be printed locally when you complete checkout!');
-    
-    // 3. Update location status
+    // 2. Update location status
     updateStatus('Selected: ' + shop.name + ' ✅');
     
-    // 4. Show cart buttons
+    // 3. Immediately update cart attributes
+    updateCartAttributes(shop);
+    
+    // 4. Show success message
+    alert('Print shop selected: ' + shop.name + '\\n\\nLocal pickup option will appear in checkout!');
+    
+    // 5. Show cart buttons
     const cartButtons = document.getElementById('cart-buttons');
     if (cartButtons) {
       cartButtons.style.display = 'block';

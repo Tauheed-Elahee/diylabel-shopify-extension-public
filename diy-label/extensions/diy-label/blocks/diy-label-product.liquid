@@ -445,13 +445,16 @@
       modalBody.scrollTop = 0;
     }
     
-    // 2. Show alert
-    alert('Print shop selected: ' + shop.name + '\\n\\nYour order will be printed locally when you complete checkout!');
-    
-    // 3. Update location status
+    // 2. Update location status
     updateStatus('Selected: ' + shop.name + ' ✅');
     
-    // 4. Show cart buttons
+    // 3. Immediately update cart attributes
+    updateCartAttributes(shop);
+    
+    // 4. Show success message
+    alert('Print shop selected: ' + shop.name + '\\n\\nLocal pickup option will appear in checkout!');
+    
+    // 5. Show cart buttons
     const cartButtons = document.getElementById('cart-buttons-' + blockId);
     if (cartButtons) {
       cartButtons.style.display = 'block';
@@ -532,9 +535,7 @@
           'diy_label_print_shop_id': printShop.id.toString(),
           'diy_label_print_shop_name': printShop.name,
           'diy_label_print_shop_address': printShop.address,
-          'diy_label_customer_location': JSON.stringify(userLocation),
-          'diy_label_product_id': productId,
-          'diy_label_selection_timestamp': new Date().toISOString()
+          'diy_label_customer_location': JSON.stringify(userLocation)
         }
       };
       
@@ -546,9 +547,16 @@
       
       if (response.ok) {
         console.log('Cart updated with DIY Label selection');
+        
+        // Show success feedback
+        const statusElement = document.getElementById('location-status-' + blockId);
+        if (statusElement) {
+          statusElement.innerHTML = '<p style="margin: 0; font-size: 14px; font-weight: 500; color: #28a745;">✅ Local pickup enabled for checkout!</p>';
+        }
       }
     } catch (error) {
       console.error('Error updating cart:', error);
+      alert('Error enabling local pickup. Please try again.');
     }
   }
   
