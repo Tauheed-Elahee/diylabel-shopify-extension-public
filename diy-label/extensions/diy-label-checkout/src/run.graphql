@@ -1,6 +1,5 @@
 query RunInput {
   cart {
-    id
     lines {
       id
       quantity
@@ -10,14 +9,17 @@ query RunInput {
           product {
             id
             handle
-            tags
           }
         }
       }
     }
-    attributes {
-      key
+    attribute(key: "diy_label_enabled") {
       value
+    }
+    buyerIdentity {
+      customer {
+        id
+      }
     }
   }
   fulfillmentGroups {
@@ -43,7 +45,7 @@ query RunInput {
     }
   }
   deliveryOptionGenerator {
-    metafield: metafield(namespace: "$app:diy-label", key: "config") {
+    metafield(namespace: "$app:diy-label", key: "config") {
       value
     }
   }

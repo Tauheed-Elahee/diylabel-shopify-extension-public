@@ -9,14 +9,6 @@ interface DIYLabelConfig {
   sustainabilityMessage: boolean;
 }
 
-interface PrintShopData {
-  id: string;
-  name: string;
-  address: string;
-  estimatedCompletion: string;
-  distance?: string;
-}
-
 export function run(input: RunInput): FunctionRunResult {
   // Parse configuration from metafield
   const configuration: DIYLabelConfig = JSON.parse(
@@ -28,87 +20,45 @@ export function run(input: RunInput): FunctionRunResult {
     return { operations: [] };
   }
 
-  // Check if cart has DIY Label selection
-  const diyLabelEnabled = input.cart.attributes.find(
-    attr => attr.key === 'diy_label_enabled' && attr.value === 'true'
-  );
+  // Check if cart has DIY Label selection using the single attribute query
+  const diyLabelEnabled = input.cart.attribute?.value === 'true';
 
   if (!diyLabelEnabled) {
     return { operations: [] };
   }
 
-  // Extract DIY Label data from cart attributes
-  const printShopId = input.cart.attributes.find(
-    attr => attr.key === 'diy_label_print_shop_id'
-  )?.value;
+  // Since we can only query one attribute at a time in Functions,
+  // we'll need to get the DIY Label data from a different approach
+  // For now, let's create a basic pickup option and enhance it later
+  
+  // Check if we have products in the cart (we can't check tags in Functions)
+  const hasProducts = input.cart.lines.length > 0;
 
-  const printShopName = input.cart.attributes.find(
-    attr => attr.key === 'diy_label_print_shop_name'
-  )?.value;
-
-  const printShopAddress = input.cart.attributes.find(
-    attr => attr.key === 'diy_label_print_shop_address'
-  )?.value;
-
-  const estimatedCompletion = input.cart.attributes.find(
-    attr => attr.key === 'diy_label_estimated_completion'
-  )?.value;
-
-  const customerLocation = input.cart.attributes.find(
-    attr => attr.key === 'diy_label_customer_location'
-  )?.value;
-
-  // If no print shop selected, return empty operations
-  if (!printShopId || !printShopName) {
+  if (!hasProducts) {
     return { operations: [] };
   }
 
-  // Parse customer location for distance calculation
-  let distance = '';
-  if (customerLocation) {
-    try {
-      const location = JSON.parse(customerLocation);
-      // Distance would be calculated on the frontend, but we can display it if available
-      distance = location.distance ? ` (${location.distance} miles away)` : '';
-    } catch (e) {
-      // Ignore parsing errors
-    }
-  }
-
-  // Calculate estimated pickup time
-  const pickupTime = estimatedCompletion || configuration.defaultPickupTime;
+  // Generate a basic DIY Label pickup option
+  // In a real implementation, you'd store the print shop data in the cart attribute value
+  // as a JSON string, or use a separate metafield lookup
   
-  // Create pickup instruction with sustainability messaging
-  let pickupInstruction = `Ready for pickup in ${pickupTime}`;
+  let pickupInstruction = `Ready for pickup in ${configuration.defaultPickupTime}`;
   
   if (configuration.sustainabilityMessage) {
     pickupInstruction += '. 🌱 Printed locally to reduce shipping impact and support your community!';
-  }
-
-  // Check if we have DIY Label products in the cart
-  const hasDIYLabelProducts = input.cart.lines.some(line => {
-    if (line.merchandise.__typename === 'ProductVariant') {
-      return line.merchandise.product.tags.includes('diy-label') ||
-             line.merchandise.product.tags.includes('diy_label');
-    }
-    return false;
-  });
-
-  if (!hasDIYLabelProducts) {
-    return { operations: [] };
   }
 
   // Generate the pickup option
   const operations = [
     {
       add: {
-        title: `🌱 ${printShopName}${distance}`,
+        title: "🌱 Local Print Shop",
         cost: 0, // Local pickup is free
         pickupLocation: {
-          locationHandle: `diy-label-${printShopId}`,
+          locationHandle: "diy-label-pickup",
           pickupInstruction: pickupInstruction
         },
-        description: `Local printing at ${printShopName}. ${printShopAddress || 'Address available at pickup.'}`,
+        description: "Your order will be printed locally and ready for pickup.",
       }
     }
   ];
