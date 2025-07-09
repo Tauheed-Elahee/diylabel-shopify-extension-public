@@ -25,25 +25,25 @@ key = "enable_sustainability_messaging"
 type = "boolean"
 name = "Show sustainability impact"
 description = "Display environmental benefits of local printing"
-default = true
+# default = true
 
 [[extensions.settings.fields]]
 key = "allow_print_shop_changes"
 type = "boolean"
 name = "Allow print shop changes in checkout"
 description = "Let customers change their print shop selection during checkout"
-default = true
+# default = true
 
 [[extensions.settings.fields]]
 key = "default_radius"
 type = "number_integer"
 name = "Default search radius (miles)"
 description = "How far to search for print shops by default"
-default = 25
+# default = 25
 
 [[extensions.settings.fields]]
 key = "show_environmental_impact"
 type = "boolean"
 name = "Show CO2 savings"
 description = "Display estimated carbon footprint reduction"
-default = true
+# default = true
