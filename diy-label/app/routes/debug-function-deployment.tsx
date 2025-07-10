@@ -86,12 +86,13 @@ export default function DebugFunctionDeployment() {
           marginBottom: '20px'
         }}>
           <h3 style={{ margin: '0 0 15px 0' }}>Step 2: Verify Deployment</h3>
-          <p>After deployment, check in your Shopify admin:</p>
+          <p>After deployment, verify in one of these ways:</p>
           <ol>
-            <li>Go to <strong>Settings → Checkout</strong></li>
-            <li>Look for <strong>"DIY Label Local Pickup"</strong> in functions</li>
-            <li>Make sure it's <strong>enabled</strong></li>
+            <li><strong>Partners Dashboard:</strong> Check your app's extensions section</li>
+            <li><strong>CLI Command:</strong> Run <code>shopify app info</code></li>
+            <li><strong>Direct Test:</strong> Test in checkout (most reliable)</li>
           </ol>
+          <p><strong>Note:</strong> Functions only appear in Shopify admin for Plus stores. For regular stores, test directly in checkout.</p>
         </div>
 
         <div style={{ 

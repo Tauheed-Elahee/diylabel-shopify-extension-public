@@ -23,6 +23,12 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         category: "Primary"
       },
       {
+        title: "🔍 Function Status Check",
+        url: "/debug-function-status",
+        description: "Verify if the Shopify Function is deployed and working correctly",
+        category: "Primary"
+      },
+      {
         title: "🧪 Cart Attributes Test",
         url: "/test-cart-attributes",
         description: "Test cart attribute functionality that the checkout function depends on",
