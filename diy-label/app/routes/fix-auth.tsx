@@ -106,6 +106,20 @@ export default function FixAuth() {
         </div>
       )}
 
+      <div style={{ marginBottom: '20px' }}>
+        <a href="/debug-index" style={{ 
+          padding: '8px 16px', 
+          backgroundColor: '#007cba', 
+          color: 'white', 
+          textDecoration: 'none', 
+          borderRadius: '4px',
+          fontSize: '14px',
+          fontWeight: '600'
+        }}>
+          ← Back to Debug Center
+        </a>
+      </div>
+
       <div style={{ marginBottom: '30px' }}>
         <h2>🚨 Common Authentication Issues</h2>
         <div style={{ 

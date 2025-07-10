@@ -247,10 +247,24 @@ export default function DebugDashboard() {
 
       <div style={{ marginTop: '30px' }}>
         <h3>Quick Actions</h3>
+        <div style={{ marginBottom: '15px' }}>
+          <a href="/debug-index" style={{ 
+            padding: '8px 16px', 
+            backgroundColor: '#007cba', 
+            color: 'white', 
+            textDecoration: 'none', 
+            borderRadius: '4px',
+            fontSize: '14px',
+            fontWeight: '600'
+          }}>
+            ← Back to Debug Center
+          </a>
+        </div>
         <ul>
           <li><a href="/app">Try Dashboard Again</a></li>
           <li><a href="/debug-shopify-auth">Check Shopify Auth</a></li>
           <li><a href="/diagnose-db">Check Database</a></li>
+          <li><a href="/debug-auth-status">Authentication Status</a></li>
         </ul>
       </div>
     </div>

@@ -355,10 +355,25 @@ export default function DebugDIYLabelFlow() {
 
       <div style={{ marginTop: '30px' }}>
         <h3>🔗 Quick Links</h3>
+        <div style={{ marginBottom: '15px' }}>
+          <a href="/debug-index" style={{ 
+            padding: '8px 16px', 
+            backgroundColor: '#007cba', 
+            color: 'white', 
+            textDecoration: 'none', 
+            borderRadius: '4px',
+            fontSize: '14px',
+            fontWeight: '600'
+          }}>
+            ← Back to Debug Center
+          </a>
+        </div>
         <ul>
           <li><a href="/app">Admin Dashboard</a></li>
           <li><a href="/diagnose-db">Database Diagnosis</a></li>
           <li><a href="/test-order-creation">Test Order Creation</a></li>
+          <li><a href="/test-cart-attributes">Cart Attributes Test</a></li>
+          <li><a href="/debug-stores">Store Management</a></li>
         </ul>
       </div>
     </div>

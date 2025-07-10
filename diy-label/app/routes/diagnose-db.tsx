@@ -242,6 +242,19 @@ export default function DiagnoseDB() {
 
       <div style={{ marginTop: '30px' }}>
         <h3>Full Diagnostic Data:</h3>
+        <div style={{ marginBottom: '15px' }}>
+          <a href="/debug-index" style={{ 
+            padding: '8px 16px', 
+            backgroundColor: '#007cba', 
+            color: 'white', 
+            textDecoration: 'none', 
+            borderRadius: '4px',
+            fontSize: '14px',
+            fontWeight: '600'
+          }}>
+            ← Back to Debug Center
+          </a>
+        </div>
         <pre style={{ backgroundColor: '#f5f5f5', padding: '10px', overflow: 'auto', fontSize: '12px' }}>
           {JSON.stringify(result, null, 2)}
         </pre>

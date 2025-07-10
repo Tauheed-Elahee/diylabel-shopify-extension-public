@@ -272,10 +272,24 @@ export default function DebugShopifyAuth() {
 
       <div style={{ marginTop: '20px' }}>
         <h3>Test URLs</h3>
+        <div style={{ marginBottom: '15px' }}>
+          <a href="/debug-index" style={{ 
+            padding: '8px 16px', 
+            backgroundColor: '#007cba', 
+            color: 'white', 
+            textDecoration: 'none', 
+            borderRadius: '4px',
+            fontSize: '14px',
+            fontWeight: '600'
+          }}>
+            ← Back to Debug Center
+          </a>
+        </div>
         <ul>
           <li><a href="?shop=diy-label.myshopify.com">Test diy-label.myshopify.com</a></li>
           <li><a href="/app">Go to Admin Dashboard</a></li>
           <li><a href="/diagnose-db">Database Diagnosis</a></li>
+          <li><a href="/debug-auth-status">Authentication Status</a></li>
         </ul>
       </div>
     </div>

@@ -6,6 +6,19 @@ export default function DebugSimple() {
       
       <div style={{ marginTop: '20px' }}>
         <h3>Test Links:</h3>
+        <div style={{ marginBottom: '15px' }}>
+          <a href="/debug-index" style={{ 
+            padding: '8px 16px', 
+            backgroundColor: '#007cba', 
+            color: 'white', 
+            textDecoration: 'none', 
+            borderRadius: '4px',
+            fontSize: '14px',
+            fontWeight: '600'
+          }}>
+            ← Back to Debug Center
+          </a>
+        </div>
         <ul>
           <li><a href="/test-order-creation">Test Order Creation</a></li>
           <li><a href="/debug-dashboard">Debug Dashboard</a></li>
