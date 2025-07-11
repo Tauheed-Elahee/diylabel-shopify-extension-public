@@ -14,14 +14,12 @@ type Cart {
 type CartLine {
   id: ID!
   quantity: Int!
-  merchandise: Merchandise!
+  merchandise: ProductVariant!
 }
 
-type Merchandise {
+type ProductVariant {
   id: ID!
-  ... on ProductVariant {
-    product: Product!
-  }
+  product: Product!
 }
 
 type Product {

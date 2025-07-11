@@ -4,12 +4,10 @@ query RunInput {
       id
       quantity
       merchandise {
-        ... on ProductVariant {
+        id
+        product {
           id
-          product {
-            id
-            handle
-          }
+          handle
         }
       }
     }
