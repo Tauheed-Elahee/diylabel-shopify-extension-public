@@ -19,9 +19,16 @@ describe('DIY Label local pickup delivery option generator', () => {
           }
         }
       ],
-      attribute: {
-        value: 'true'
-      },
+      attributes: [
+        {
+          key: 'diy_label_enabled',
+          value: 'true'
+        },
+        {
+          key: 'diy_label_print_shop_name',
+          value: 'Test Print Shop'
+        }
+      ],
       buyerIdentity: {
         customer: {
           id: "gid://shopify/Customer/1"
@@ -70,13 +77,12 @@ describe('DIY Label local pickup delivery option generator', () => {
       operations: [
         {
           add: {
-            title: "🌱 Local Print Shop",
-            cost: 0,
-            pickupLocation: {
-              locationHandle: "diy-label-pickup",
-              pickupInstruction: "Ready for pickup in 2-3 business days. 🌱 Printed locally to reduce shipping impact and support your community!"
+            title: "🌱 Local Print Shop Pickup",
+            cost: {
+              amount: "0.00",
+              currencyCode: "USD"
             },
-            description: "Your order will be printed locally and ready for pickup."
+            description: "Free pickup from Test Print Shop. Ready in 2-3 business days. 🌱 Supports your community and reduces shipping impact!"
           }
         }
       ]
@@ -85,7 +91,7 @@ describe('DIY Label local pickup delivery option generator', () => {
     expect(result).toEqual(expected);
   });
 
-  it('returns empty operations when DIY Label is disabled', () => {
+  it('returns empty operations when DIY Label is disabled in config', () => {
     const disabledInput = {
       ...mockInput,
       deliveryOptionGenerator: {
@@ -104,7 +110,7 @@ describe('DIY Label local pickup delivery option generator', () => {
       ...mockInput,
       cart: {
         ...mockInput.cart,
-        attribute: null // No DIY Label attribute
+        attributes: [] // No DIY Label attributes
       }
     };
 
@@ -125,6 +131,26 @@ describe('DIY Label local pickup delivery option generator', () => {
     expect(result).toEqual({ operations: [] });
   });
 
+  it('handles missing print shop name gracefully', () => {
+    const noShopNameInput = {
+      ...mockInput,
+      cart: {
+        ...mockInput.cart,
+        attributes: [
+          {
+            key: 'diy_label_enabled',
+            value: 'true'
+          }
+          // No print shop name
+        ]
+      }
+    };
+
+    const result = run(noShopNameInput);
+    
+    expect(result.operations[0].add.description).toContain("Local Print Shop");
+  });
+
   it('handles sustainability messaging toggle', () => {
     const noSustainabilityInput = {
       ...mockInput,
@@ -137,8 +163,8 @@ describe('DIY Label local pickup delivery option generator', () => {
 
     const result = run(noSustainabilityInput);
     
-    expect(result.operations[0].add.pickupLocation.pickupInstruction).toBe("Ready for pickup in 2-3 business days");
-    expect(result.operations[0].add.pickupLocation.pickupInstruction).not.toContain("🌱");
+    expect(result.operations[0].add.description).not.toContain("🌱");
+    expect(result.operations[0].add.description).toBe("Free pickup from Test Print Shop. Ready in 2-3 business days.");
   });
 
   it('uses custom pickup time from configuration', () => {
@@ -153,6 +179,6 @@ describe('DIY Label local pickup delivery option generator', () => {
 
     const result = run(customTimeInput);
     
-    expect(result.operations[0].add.pickupLocation.pickupInstruction).toBe("Ready for pickup in Same day");
+    expect(result.operations[0].add.description).toContain("Same day");
   });
 });
