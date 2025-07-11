@@ -1,108 +1,52 @@
-type Input {
-  cart: Cart!
-  fulfillmentGroups: [FulfillmentGroup!]!
-  locations: [Location!]!
-  deliveryOptionGenerator: DeliveryOptionGenerator!
+query RunInput {
+  cart {
+    lines {
+      id
+      quantity
+      merchandise {
+        ... on ProductVariant {
+          id
+          product {
+            id
+            handle
+          }
+        }
+      }
+    }
+    attribute(key: "diy_label_enabled") {
+      value
+    }
+    buyerIdentity {
+      customer {
+        id
+      }
+    }
+  }
+  fulfillmentGroups {
+    handle
+    inventoryLocationHandles
+    lines {
+      id
+    }
+    deliveryGroup {
+      id
+    }
+  }
+  locations {
+    handle
+    name
+    address {
+      address1
+      address2
+      city
+      provinceCode
+      countryCode
+      zip
+    }
+  }
+  deliveryOptionGenerator {
+    metafield(namespace: "$app:diy-label", key: "config") {
+      value
+    }
+  }
 }
-
-type Cart {
-  lines: [CartLine!]!
-  attribute(key: String!): CartAttribute
-  buyerIdentity: CartBuyerIdentity!
-}
-
-type CartLine {
-  id: ID!
-  quantity: Int!
-  merchandise: ProductVariant!
-}
-
-type ProductVariant {
-  id: ID!
-  product: Product!
-}
-
-type Product {
-  id: ID!
-  handle: String!
-}
-
-type CartAttribute {
-  value: String
-}
-
-type CartBuyerIdentity {
-  customer: Customer
-}
-
-type Customer {
-  id: ID!
-}
-
-type FulfillmentGroup {
-  handle: String!
-  lines: [CartLine!]!
-  deliveryGroup: DeliveryGroup!
-  inventoryLocationHandles: [String!]!
-}
-
-type DeliveryGroup {
-  id: ID!
-}
-
-type Location {
-  handle: String!
-  name: String!
-  address: LocationAddress!
-}
-
-type LocationAddress {
-  address1: String
-  address2: String
-  city: String
-  provinceCode: String
-  countryCode: String
-  zip: String
-}
-
-type DeliveryOptionGenerator {
-  metafield(namespace: String!, key: String!): Metafield
-}
-
-type Metafield {
-  value: String
-}
-
-type Output {
-  operations: [Operation!]!
-}
-
-type Operation {
-  add: DeliveryOptionAdd!
-}
-
-type DeliveryOptionAdd {
-  title: String!
-  cost: MoneyInput!
-  pickupLocation: PickupLocationInput
-  description: String
-}
-
-type MoneyInput {
-  amount: Decimal!
-  currencyCode: CurrencyCode!
-}
-
-type PickupLocationInput {
-  locationHandle: String!
-  pickupInstruction: String!
-}
-
-enum CurrencyCode {
-  USD
-  CAD
-  EUR
-  GBP
-}
-
-scalar Decimal
