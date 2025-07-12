@@ -1,4 +1,4 @@
-use super::schema;
+use crate::schema;
 use shopify_function::prelude::*;
 use shopify_function::Result;
 
@@ -22,16 +22,7 @@ fn run(input: schema::run::Input) -> Result<schema::FunctionRunResult> {
         return Ok(schema::FunctionRunResult { operations: vec![] });
     }
 
-    // Get pickup locations from metafield configuration
-    let pickup_locations = input
-        .delivery_option_generator
-        .metafield
-        .as_ref()
-        .and_then(|metafield| metafield.value.as_ref())
-        .unwrap_or("[]");
-
-    // Parse pickup locations (in a real implementation, you'd parse JSON)
-    // For now, we'll create a default pickup location
+    // Create pickup option if we have a location
     let operations = if let Some(location) = input.locations.first() {
         vec![schema::Operation {
             add: schema::LocalPickupDeliveryOption {
@@ -82,6 +73,7 @@ mod tests {
                             "id": "gid://shopify/CartLine/1",
                             "quantity": 1,
                             "merchandise": {
+                                "__typename": "ProductVariant",
                                 "id": "gid://shopify/ProductVariant/1",
                                 "product": {
                                     "id": "gid://shopify/Product/1",
@@ -120,6 +112,7 @@ mod tests {
                             "id": "gid://shopify/CartLine/1",
                             "quantity": 1,
                             "merchandise": {
+                                "__typename": "ProductVariant",
                                 "id": "gid://shopify/ProductVariant/1",
                                 "product": {
                                     "id": "gid://shopify/Product/1",
