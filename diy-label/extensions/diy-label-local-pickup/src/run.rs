@@ -7,7 +7,7 @@ fn run(input: schema::run::Input) -> Result<schema::FunctionRunResult> {
     // Check if local pickup is requested via cart attribute
     let pickup_requested = input
         .cart()
-        .attribute
+        .attribute()
         .as_ref()
         .map(|attr| attr.value.as_deref() == Some("pickup"))
         .unwrap_or(false);
@@ -18,7 +18,7 @@ fn run(input: schema::run::Input) -> Result<schema::FunctionRunResult> {
     }
 
     // Check if cart has items
-    if input.cart().lines.is_empty() {
+    if input.cart().lines().is_empty() {
         return Ok(schema::FunctionRunResult { operations: vec![] });
     }
 
@@ -29,12 +29,11 @@ fn run(input: schema::run::Input) -> Result<schema::FunctionRunResult> {
                 title: Some("🌱 Local Print Shop Pickup".to_string()),
                 cost: Some(Decimal(0.0)), // Free pickup
                 pickup_location: schema::PickupLocation {
-                    location_handle: location.handle.clone(),
+                    location_handle: location.handle().clone(),
                     pickup_instruction: Some(
                         "Your order will be printed locally and ready for pickup. You'll receive a notification when it's ready.".to_string()
                     ),
                 },
-                // Remove metafields since DeliveryOptionMetafield doesn't exist in schema
                 metafields: None,
             },
         }]
