@@ -6,7 +6,7 @@ use shopify_function::Result;
 fn run(input: schema::run::Input) -> Result<schema::FunctionRunResult> {
     // Check if local pickup is requested via cart attribute
     let pickup_requested = input
-        .cart
+        .cart()
         .attribute
         .as_ref()
         .map(|attr| attr.value.as_deref() == Some("pickup"))
@@ -18,12 +18,12 @@ fn run(input: schema::run::Input) -> Result<schema::FunctionRunResult> {
     }
 
     // Check if cart has items
-    if input.cart.lines.is_empty() {
+    if input.cart().lines.is_empty() {
         return Ok(schema::FunctionRunResult { operations: vec![] });
     }
 
     // Create pickup option if we have a location
-    let operations = if let Some(location) = input.locations.first() {
+    let operations = if let Some(location) = input.locations().first() {
         vec![schema::Operation {
             add: schema::LocalPickupDeliveryOption {
                 title: Some("🌱 Local Print Shop Pickup".to_string()),
@@ -34,18 +34,8 @@ fn run(input: schema::run::Input) -> Result<schema::FunctionRunResult> {
                         "Your order will be printed locally and ready for pickup. You'll receive a notification when it's ready.".to_string()
                     ),
                 },
-                metafields: Some(vec![
-                    schema::DeliveryOptionMetafield {
-                        namespace: "diy_label".to_string(),
-                        key: "delivery_type".to_string(),
-                        value: "local_pickup".to_string(),
-                    },
-                    schema::DeliveryOptionMetafield {
-                        namespace: "diy_label".to_string(),
-                        key: "sustainable".to_string(),
-                        value: "true".to_string(),
-                    },
-                ]),
+                // Remove metafields since DeliveryOptionMetafield doesn't exist in schema
+                metafields: None,
             },
         }]
     } else {
@@ -166,7 +156,6 @@ mod tests {
             assert_eq!(pickup_option.cost, Some(Decimal(0.0)));
             assert_eq!(pickup_option.pickup_location.location_handle, "test_location");
             assert!(pickup_option.pickup_location.pickup_instruction.is_some());
-            assert!(pickup_option.metafields.is_some());
         }
 
         Ok(())
