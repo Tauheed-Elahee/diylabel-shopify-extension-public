@@ -14,8 +14,7 @@ query RunInput {
         }
       }
     }
-    attributes {
-      key
+    attribute(key: "diy_label_enabled") {
       value
     }
     buyerIdentity {
