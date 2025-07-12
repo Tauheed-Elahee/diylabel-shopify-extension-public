@@ -15,6 +15,3 @@ strip = true
 [[bin]]
 name = "diy-label-local-pickup"
 path = "src/main.rs"
-
-[lib]
-crate-type = ["cdylib"]
