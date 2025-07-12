@@ -9,7 +9,7 @@ fn run(input: schema::run::Input) -> Result<schema::FunctionRunResult> {
         .cart()
         .attribute()
         .as_ref()
-        .map(|attr| attr.value().as_deref() == Some("pickup"))
+        .map(|attr| attr.value().map_or(false, |v| v == "pickup"))
         .unwrap_or(false);
 
     // If pickup is not requested, return no operations
