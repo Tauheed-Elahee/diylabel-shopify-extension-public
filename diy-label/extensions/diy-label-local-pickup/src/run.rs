@@ -3,20 +3,63 @@ use shopify_function::prelude::*;
 use shopify_function::Result;
 
 #[shopify_function]
-fn run(_input: schema::run::Input) -> Result<schema::FunctionRunResult> {
-    let operations = vec![schema::Operation {
-        add: schema::LocalPickupDeliveryOption {
-            title: Some("Main St.".to_string()),
-            cost: Some(Decimal(1.99)),
-            pickup_location: schema::PickupLocation {
-                location_handle: "2578303".to_string(),
-                pickup_instruction: Some("Usually ready in 24 hours.".to_string()),
-            },
-            metafields: None,
-        },
-    }];
+fn run(input: schema::run::Input) -> Result<schema::FunctionRunResult> {
+    // Check if local pickup is requested via cart attribute
+    let pickup_requested = input
+        .cart
+        .attribute
+        .as_ref()
+        .map(|attr| attr.value.as_deref() == Some("pickup"))
+        .unwrap_or(false);
 
-    // Build operations based on the input query response here.
+    // If pickup is not requested, return no operations
+    if !pickup_requested {
+        return Ok(schema::FunctionRunResult { operations: vec![] });
+    }
+
+    // Check if cart has items
+    if input.cart.lines.is_empty() {
+        return Ok(schema::FunctionRunResult { operations: vec![] });
+    }
+
+    // Get pickup locations from metafield configuration
+    let pickup_locations = input
+        .delivery_option_generator
+        .metafield
+        .as_ref()
+        .and_then(|metafield| metafield.value.as_ref())
+        .unwrap_or("[]");
+
+    // Parse pickup locations (in a real implementation, you'd parse JSON)
+    // For now, we'll create a default pickup location
+    let operations = if let Some(location) = input.locations.first() {
+        vec![schema::Operation {
+            add: schema::LocalPickupDeliveryOption {
+                title: Some("🌱 Local Print Shop Pickup".to_string()),
+                cost: Some(Decimal(0.0)), // Free pickup
+                pickup_location: schema::PickupLocation {
+                    location_handle: location.handle.clone(),
+                    pickup_instruction: Some(
+                        "Your order will be printed locally and ready for pickup. You'll receive a notification when it's ready.".to_string()
+                    ),
+                },
+                metafields: Some(vec![
+                    schema::DeliveryOptionMetafield {
+                        namespace: "diy_label".to_string(),
+                        key: "delivery_type".to_string(),
+                        value: "local_pickup".to_string(),
+                    },
+                    schema::DeliveryOptionMetafield {
+                        namespace: "diy_label".to_string(),
+                        key: "sustainable".to_string(),
+                        value: "true".to_string(),
+                    },
+                ]),
+            },
+        }]
+    } else {
+        vec![]
+    };
 
     Ok(schema::FunctionRunResult { operations })
 }
@@ -27,62 +70,137 @@ mod tests {
     use shopify_function::{run_function_with_input, Result};
 
     #[test]
-    fn test_result_contains_no_operations() -> Result<()> {
+    fn test_no_operations_when_pickup_not_requested() -> Result<()> {
         let result = run_function_with_input(
             run,
             r#"
-          {
-            "cart": {
-              "lines": [
-                {
-                  "id": "gid://shopify/CartLine/1"
-                }
-              ]
-            },
-            "fulfillmentGroups": [
-              {
-                "handle":  "1",
-                "lines": [
-                  {
-                    "id": "gid://shopify/CartLine/1"
-                  }
-                ],
-                "deliveryGroup": {
-                  "id": "gid://shopify/CartDeliveryGroup/1"
+            {
+                "cart": {
+                    "attribute": null,
+                    "lines": [
+                        {
+                            "id": "gid://shopify/CartLine/1",
+                            "quantity": 1,
+                            "merchandise": {
+                                "id": "gid://shopify/ProductVariant/1",
+                                "product": {
+                                    "id": "gid://shopify/Product/1",
+                                    "title": "Test Product"
+                                }
+                            }
+                        }
+                    ]
                 },
-                "inventoryLocationHandles": ["2578303"]
-              }
-            ],
-            "locations": [
-              {
-                "handle": "2578303",
-                "name": "Main St.",
-                "address": {
-                  "address1": "123 Main St."
+                "fulfillmentGroups": [],
+                "locations": [],
+                "deliveryOptionGenerator": {
+                    "metafield": null
                 }
-              }
-            ],
-            "deliveryOptionGenerator": {
-              "metafield": null
             }
-          }
-        "#,
+            "#,
         )?;
 
-        let operations = vec![schema::Operation {
-            add: schema::LocalPickupDeliveryOption {
-                title: Some("Main St.".to_string()),
-                cost: Some(Decimal(1.99)),
-                pickup_location: schema::PickupLocation {
-                    location_handle: "2578303".to_string(),
-                    pickup_instruction: Some("Usually ready in 24 hours.".to_string()),
+        let expected = schema::FunctionRunResult { operations: vec![] };
+        assert_eq!(result, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn test_creates_pickup_option_when_requested() -> Result<()> {
+        let result = run_function_with_input(
+            run,
+            r#"
+            {
+                "cart": {
+                    "attribute": {
+                        "value": "pickup"
+                    },
+                    "lines": [
+                        {
+                            "id": "gid://shopify/CartLine/1",
+                            "quantity": 1,
+                            "merchandise": {
+                                "id": "gid://shopify/ProductVariant/1",
+                                "product": {
+                                    "id": "gid://shopify/Product/1",
+                                    "title": "Test Product"
+                                }
+                            }
+                        }
+                    ]
                 },
-                metafields: None,
-            },
-        }];
+                "fulfillmentGroups": [
+                    {
+                        "handle": "1",
+                        "lines": [
+                            {
+                                "id": "gid://shopify/CartLine/1"
+                            }
+                        ],
+                        "deliveryGroup": {
+                            "id": "gid://shopify/CartDeliveryGroup/1"
+                        },
+                        "inventoryLocationHandles": ["test_location"]
+                    }
+                ],
+                "locations": [
+                    {
+                        "handle": "test_location",
+                        "name": "Test Location",
+                        "address": {
+                            "address1": "123 Test St",
+                            "address2": null,
+                            "city": "Test City",
+                            "provinceCode": "CA",
+                            "countryCode": "US",
+                            "zip": "12345"
+                        }
+                    }
+                ],
+                "deliveryOptionGenerator": {
+                    "metafield": null
+                }
+            }
+            "#,
+        )?;
 
-        let expected = schema::FunctionRunResult { operations };
+        // Verify that we get one operation
+        assert_eq!(result.operations.len(), 1);
+        
+        // Verify the operation details
+        if let schema::Operation { add: pickup_option } = &result.operations[0] {
+            assert_eq!(pickup_option.title, Some("🌱 Local Print Shop Pickup".to_string()));
+            assert_eq!(pickup_option.cost, Some(Decimal(0.0)));
+            assert_eq!(pickup_option.pickup_location.location_handle, "test_location");
+            assert!(pickup_option.pickup_location.pickup_instruction.is_some());
+            assert!(pickup_option.metafields.is_some());
+        }
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_no_operations_when_cart_empty() -> Result<()> {
+        let result = run_function_with_input(
+            run,
+            r#"
+            {
+                "cart": {
+                    "attribute": {
+                        "value": "pickup"
+                    },
+                    "lines": []
+                },
+                "fulfillmentGroups": [],
+                "locations": [],
+                "deliveryOptionGenerator": {
+                    "metafield": null
+                }
+            }
+            "#,
+        )?;
+
+        let expected = schema::FunctionRunResult { operations: vec![] };
         assert_eq!(result, expected);
         Ok(())
     }

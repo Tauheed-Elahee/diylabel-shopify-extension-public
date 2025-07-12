@@ -1,10 +1,9 @@
-api_version = "unstable"
+api_version = "2024-10"
 
 [[extensions]]
-name = "t:name"
+name = "DIY Label Local Pickup"
 handle = "diy-label-local-pickup"
 type = "function"
-
 
   [[extensions.targeting]]
   target = "purchase.local-pickup-delivery-option-generator.run"
