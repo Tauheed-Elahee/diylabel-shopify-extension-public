@@ -2,5 +2,18 @@
   "welcome": "Bienvenue dans l'extension {{target}}!",
   "iWouldLikeAFreeGiftWithMyOrder": "Je souhaite recevoir un cadeau gratuit avec ma commande",
   "addAFreeGiftToMyOrder": "Ajouter un cadeau gratuit à ma commande",
-  "attributeChangesAreNotSupported": "Les modifications d'attribut ne sont pas prises en charge dans cette commande"
+  "attributeChangesAreNotSupported": "Les modifications d'attribut ne sont pas prises en charge dans cette commande",
+  "localPrintingAvailable": "Impression Locale Disponible",
+  "supportLocalCommunity": "Soutenez votre communauté locale et réduisez l'impact d'expédition en imprimant vos articles dans un magasin à proximité pour le ramassage.",
+  "selectPrintShop": "Sélectionnez un Magasin d'Impression:",
+  "choosePrintShop": "Choisissez un magasin d'impression...",
+  "localPrintingSelected": "Impression Locale Sélectionnée",
+  "orderWillBePrinted": "Votre commande sera imprimée chez {{printShop}} et prête pour le ramassage. Cela réduit l'impact d'expédition et soutient votre communauté locale.",
+  "removeLocalPrinting": "Supprimer l'Impression Locale",
+  "loadingPrintShops": "Chargement des magasins d'impression à proximité...",
+  "noLocationAccess": "Veuillez autoriser l'accès à la localisation pour trouver les magasins d'impression à proximité",
+  "noPrintShopsFound": "Aucun magasin d'impression trouvé dans un rayon de 25 miles de votre emplacement",
+  "failedToLoadPrintShops": "Échec du chargement des magasins d'impression",
+  "failedToSelectPrintShop": "Échec de la sélection du magasin d'impression. Veuillez réessayer.",
+  "failedToRemoveLocalPrinting": "Échec de la suppression de l'option d'impression locale"
 }
