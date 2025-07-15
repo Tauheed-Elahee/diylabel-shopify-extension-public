@@ -1,4 +1,4 @@
-api_version = "2024-07"
+api_version = "unstable"
 
 [[extensions]]
 name = "DIY Label Local Pickup"
