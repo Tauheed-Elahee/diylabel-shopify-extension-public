@@ -1,9 +1,0 @@
-/home/thegreat/Projects/DIY-Label/diylabel-shopify-extension-public/diy-label/extensions/diy-label-local-pickup/target/wasm32-wasip1/release/deps/shopify_function_wasm_api-456e13afb3102611.d: /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/shopify_function_wasm_api-0.2.0/src/lib.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/shopify_function_wasm_api-0.2.0/src/read.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/shopify_function_wasm_api-0.2.0/src/write.rs
-
-/home/thegreat/Projects/DIY-Label/diylabel-shopify-extension-public/diy-label/extensions/diy-label-local-pickup/target/wasm32-wasip1/release/deps/libshopify_function_wasm_api-456e13afb3102611.rlib: /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/shopify_function_wasm_api-0.2.0/src/lib.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/shopify_function_wasm_api-0.2.0/src/read.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/shopify_function_wasm_api-0.2.0/src/write.rs
-
-/home/thegreat/Projects/DIY-Label/diylabel-shopify-extension-public/diy-label/extensions/diy-label-local-pickup/target/wasm32-wasip1/release/deps/libshopify_function_wasm_api-456e13afb3102611.rmeta: /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/shopify_function_wasm_api-0.2.0/src/lib.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/shopify_function_wasm_api-0.2.0/src/read.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/shopify_function_wasm_api-0.2.0/src/write.rs
-
-/home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/shopify_function_wasm_api-0.2.0/src/lib.rs:
-/home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/shopify_function_wasm_api-0.2.0/src/read.rs:
-/home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/shopify_function_wasm_api-0.2.0/src/write.rs:
