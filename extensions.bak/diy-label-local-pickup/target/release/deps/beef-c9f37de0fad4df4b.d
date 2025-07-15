@@ -1,0 +1,11 @@
+/home/thegreat/Projects/DIY-Label/diylabel-shopify-extension-public/diy-label/extensions/diy-label-local-pickup/target/release/deps/beef-c9f37de0fad4df4b.d: /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/lib.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/traits.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/wide.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/generic.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/lean.rs
+
+/home/thegreat/Projects/DIY-Label/diylabel-shopify-extension-public/diy-label/extensions/diy-label-local-pickup/target/release/deps/libbeef-c9f37de0fad4df4b.rlib: /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/lib.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/traits.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/wide.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/generic.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/lean.rs
+
+/home/thegreat/Projects/DIY-Label/diylabel-shopify-extension-public/diy-label/extensions/diy-label-local-pickup/target/release/deps/libbeef-c9f37de0fad4df4b.rmeta: /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/lib.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/traits.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/wide.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/generic.rs /home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/lean.rs
+
+/home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/lib.rs:
+/home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/traits.rs:
+/home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/wide.rs:
+/home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/generic.rs:
+/home/thegreat/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/beef-0.5.2/src/lean.rs:
