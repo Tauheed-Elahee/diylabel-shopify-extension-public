@@ -1,0 +1,8 @@
+# Learn more about configuring your extension at https://shopify.dev/docs/apps/app-extensions/configuration
+
+api_version = "2025-04"
+
+[[extensions]]
+type = "theme_app_extension"
+name = "DIY Label"
+handle = "diy-label"
