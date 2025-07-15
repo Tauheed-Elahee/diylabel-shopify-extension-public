@@ -28,6 +28,10 @@ api_access = true
 # https://shopify.dev/docs/api/checkout-ui-extensions/unstable/configuration#network-access
 network_access = true
 
+# Enable access to buyer identity and delivery information
+# https://shopify.dev/docs/api/checkout-ui-extensions/unstable/configuration#buyer-identity
+buyer_identity_access = true
+
 # Loads metafields on checkout resources, including the cart,
 # products, customers, and more. Learn more:
 # https://shopify.dev/docs/api/checkout-ui-extensions/unstable/configuration#metafields
