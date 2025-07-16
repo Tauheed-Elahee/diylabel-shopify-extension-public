@@ -24,6 +24,11 @@ function Extension() {
     { id: "3", name: "Distillery Print Co.", address: "789 Front St E, Toronto, ON" },
     { id: "4", name: "Impression Montréal", address: "321 Rue Saint-Denis, Montréal, QC" },
     { id: "5", name: "Plateau Print Shop", address: "654 Avenue du Mont-Royal, Montréal, QC" },
+    { id: "6", name: "Granville Print Co.", address: "258 Granville St, Vancouver, BC" },
+    { id: "7", name: "Gastown Printing", address: "369 Water St, Vancouver, BC" },
+    { id: "8", name: "Commercial Drive Print", address: "741 Commercial Dr, Vancouver, BC" },
+    { id: "9", name: "Kitsilano Print Studio", address: "852 4th Ave W, Vancouver, BC" },
+    { id: "10", name: "Stampede Print Co.", address: "123 17th Ave SW, Calgary, AB" }
   ];
 
   // Prepare select options
@@ -37,14 +42,6 @@ function Extension() {
 
   const handlePrintShopChange = (value: string) => {
     setSelectedPrintShop(value);
-    
-    // Find the selected print shop
-    const shop = printShops.find(s => s.id === value);
-    
-    if (shop) {
-      // Show selection in console (in a real app, you would update cart attributes)
-      console.log(`Selected print shop: ${shop.name} (${shop.address})`);
-    }
   };
 
   return (
