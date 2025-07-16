@@ -12,7 +12,8 @@ import {
   useCartLines,
   useAttributes,
 } from "@shopify/ui-extensions-react/checkout";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import printShopsData from './print_shops_rows.csv';
 
 // 1. Choose an extension target
 export default reactExtension("purchase.checkout.block.render", () => (
@@ -23,91 +24,14 @@ interface PrintShop {
   id: number;
   name: string;
   address: string;
-  city: string;
-  state: string;
-  zip: string;
   lat: number;
   lng: number;
   specialty: string;
   rating: number;
   phone?: string;
   email?: string;
+  active?: boolean;
 }
-
-// Static print shop data - in production, this could be loaded from a CSV file
-// or generated during build time
-const PRINT_SHOPS_DATA: PrintShop[] = [
-  {
-    id: 1,
-    name: "Local Print Co",
-    address: "123 Main St",
-    city: "San Francisco",
-    state: "CA",
-    zip: "94102",
-    lat: 37.7749,
-    lng: -122.4194,
-    specialty: "Screen Printing",
-    rating: 4.8,
-    phone: "(415) 555-0123",
-    email: "info@localprintco.com"
-  },
-  {
-    id: 2,
-    name: "Community Print Shop",
-    address: "456 Oak Ave",
-    city: "Oakland",
-    state: "CA", 
-    zip: "94601",
-    lat: 37.8044,
-    lng: -122.2712,
-    specialty: "Embroidery & DTG",
-    rating: 4.6,
-    phone: "(510) 555-0456",
-    email: "hello@communityprint.com"
-  },
-  {
-    id: 3,
-    name: "Sustainable Prints",
-    address: "789 Green St",
-    city: "Berkeley",
-    state: "CA",
-    zip: "94704",
-    lat: 37.8715,
-    lng: -122.2730,
-    specialty: "Eco-Friendly Printing",
-    rating: 4.9,
-    phone: "(510) 555-0789",
-    email: "eco@sustainableprints.com"
-  },
-  {
-    id: 4,
-    name: "Artisan Apparel",
-    address: "321 Castro St",
-    city: "San Francisco",
-    state: "CA",
-    zip: "94114",
-    lat: 37.7609,
-    lng: -122.4350,
-    specialty: "Custom Design & Print",
-    rating: 4.7,
-    phone: "(415) 555-0321",
-    email: "create@artisanapparel.com"
-  },
-  {
-    id: 5,
-    name: "Quick Print Solutions",
-    address: "654 Mission St",
-    city: "San Francisco",
-    state: "CA",
-    zip: "94105",
-    lat: 37.7879,
-    lng: -122.4075,
-    specialty: "Fast Turnaround",
-    rating: 4.4,
-    phone: "(415) 555-0654",
-    email: "orders@quickprintsf.com"
-  }
-];
 
 function Extension() {
   const translate = useTranslate();
@@ -116,6 +40,24 @@ function Extension() {
   const applyAttributeChange = useApplyAttributeChange();
   const cartLines = useCartLines();
   const attributes = useAttributes();
+
+  // Parse CSV data
+  const parsedPrintShops = useMemo(() => {
+    return printShopsData
+      .filter(shop => shop.active !== false)
+      .map(shop => ({
+        id: parseInt(shop.id),
+        name: shop.name,
+        address: shop.address,
+        lat: parseFloat(shop.lat),
+        lng: parseFloat(shop.lng),
+        specialty: shop.specialty,
+        rating: parseFloat(shop.rating),
+        phone: shop.phone,
+        email: shop.email,
+        active: shop.active !== 'false'
+      }));
+  }, []);
 
   const [printShops, setPrintShops] = useState<PrintShop[]>([]);
   const [selectedPrintShop, setSelectedPrintShop] = useState<string>("");
@@ -290,7 +232,7 @@ function Extension() {
 
   // Filter and sort print shops by distance
   const filterPrintShopsByLocation = (location: { lat: number; lng: number }, maxDistance: number = 50): PrintShop[] => {
-    return PRINT_SHOPS_DATA
+    return parsedPrintShops
       .map(shop => ({
         ...shop,
         distance: calculateDistance(location.lat, location.lng, shop.lat, shop.lng)
@@ -319,11 +261,11 @@ function Extension() {
           try {
             location = await getUserLocation();
             console.log('Got browser location:', location);
-          } catch (geoError) {
+          } catch (geoError: any) {
             console.error('Browser geolocation failed:', geoError);
             // If all location methods fail, show all print shops
             console.log('Using all print shops as fallback');
-            setPrintShops(PRINT_SHOPS_DATA);
+            setPrintShops(parsedPrintShops);
             setLoading(false);
             return;
           }
@@ -337,13 +279,16 @@ function Extension() {
           if (nearbyShops.length === 0) {
             setError('No print shops found within 50km of your location');
           }
+        } else {
+          // If no location is available, show all print shops
+          setPrintShops(parsedPrintShops);
         }
         
       } catch (error) {
-        console.error('Error loading print shops:', error);
+        console.error('Error loading print shops:', error instanceof Error ? error.message : error);
         setError('Failed to load print shops');
         // Fallback to showing all shops
-        setPrintShops(PRINT_SHOPS_DATA);
+        setPrintShops(parsedPrintShops);
       } finally {
         setLoading(false);
       }
@@ -384,7 +329,7 @@ function Extension() {
       await applyAttributeChange({
         key: "diy_label_print_shop_address",
         type: "updateAttribute",
-        value: `${shop.address}, ${shop.city}, ${shop.state} ${shop.zip}`,
+        value: shop.address,
       });
 
       if (userLocation) {
@@ -431,15 +376,10 @@ function Extension() {
   // Prepare select options
   const selectOptions = [
     { value: "", label: translate("choosePrintShop") },
-    ...printShops.map(shop => {
-      const distance = userLocation ? 
-        ` (${calculateDistance(userLocation.lat, userLocation.lng, shop.lat, shop.lng).toFixed(1)}km)` : 
-        '';
-      return {
-        value: shop.id.toString(),
-        label: `${shop.name} - ${shop.city}, ${shop.state}${distance}`
-      };
-    })
+    ...printShops.map(shop => ({
+      value: shop.id.toString(),
+      label: `${shop.name} ${userLocation ? `(${calculateDistance(userLocation.lat, userLocation.lng, shop.lat, shop.lng).toFixed(1)}km)` : ''}`
+    }))
   ];
 
   // If already enabled, show current selection
@@ -510,15 +450,17 @@ function Extension() {
                 
                 return (
                   <>
-                    <Text emphasis="bold">{shop.name}</Text>
-                    <Text>{shop.address}, {shop.city}, {shop.state} {shop.zip}</Text>
-                    <Text>Specialty: {shop.specialty}</Text>
-                    <Text>Rating: ⭐ {shop.rating}/5</Text>
+                    <Text emphasis="bold">{shop.name} ⭐ {shop.rating}/5</Text>
+                    <Text>{shop.address}</Text>
+                    <Text>{shop.specialty}</Text>
                     {distance && (
                       <Text>Distance: {distance.toFixed(1)} km</Text>
                     )}
                     {shop.phone && (
                       <Text>Phone: {shop.phone}</Text>
+                    )}
+                    {shop.email && (
+                      <Text>Email: {shop.email}</Text>
                     )}
                   </>
                 );
