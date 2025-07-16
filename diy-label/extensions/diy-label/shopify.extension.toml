@@ -27,7 +27,3 @@ api_access = true
 # JavaScript `fetch()` API. Learn more:
 # https://shopify.dev/docs/api/checkout-ui-extensions/unstable/configuration#network-access
 network_access = true
-
-# Enable access to buyer identity and delivery information
-# https://shopify.dev/docs/api/checkout-ui-extensions/unstable/configuration#buyer-identity
-buyer_identity_access = true
