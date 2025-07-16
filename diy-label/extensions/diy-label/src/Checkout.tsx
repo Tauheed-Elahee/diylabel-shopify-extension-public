@@ -13,12 +13,115 @@ import {
   useAttributes,
 } from "@shopify/ui-extensions-react/checkout";
 import { useState, useEffect, useMemo } from "react";
-import printShopsData from './print_shops_rows.csv';
 
 // 1. Choose an extension target
 export default reactExtension("purchase.checkout.block.render", () => (
   <Extension />
 ));
+
+// Define print shop data directly in the code
+const PRINT_SHOPS_DATA = [
+  {
+    id: 1,
+    name: "Toronto Print Hub",
+    lat: 43.6532,
+    lng: -79.3832,
+    address: "123 Queen St W, Toronto, ON",
+    specialty: "T-Shirts & Hoodies",
+    rating: 4.8,
+    active: true
+  },
+  {
+    id: 2,
+    name: "King Street Printing",
+    lat: 43.6481,
+    lng: -79.3773,
+    address: "456 King St W, Toronto, ON",
+    specialty: "Business Cards & Flyers",
+    rating: 4.9,
+    active: true
+  },
+  {
+    id: 3,
+    name: "Distillery Print Co.",
+    lat: 43.6503,
+    lng: -79.3591,
+    address: "789 Front St E, Toronto, ON",
+    specialty: "Custom Designs",
+    rating: 4.7,
+    active: true
+  },
+  {
+    id: 4,
+    name: "Impression Montréal",
+    lat: 45.5017,
+    lng: -73.5673,
+    address: "321 Rue Saint-Denis, Montréal, QC",
+    specialty: "Sustainable Materials",
+    rating: 4.6,
+    active: true
+  },
+  {
+    id: 5,
+    name: "Plateau Print Shop",
+    lat: 45.52,
+    lng: -73.58,
+    address: "654 Avenue du Mont-Royal, Montréal, QC",
+    specialty: "Large Format",
+    rating: 4.8,
+    active: true
+  },
+  {
+    id: 6,
+    name: "Old Port Printing",
+    lat: 45.5088,
+    lng: -73.554,
+    address: "987 Rue Notre-Dame, Montréal, QC",
+    specialty: "Premium Quality",
+    rating: 4.9,
+    active: true
+  },
+  {
+    id: 7,
+    name: "Stampede Print Co.",
+    lat: 51.0447,
+    lng: -114.0719,
+    address: "123 17th Ave SW, Calgary, AB",
+    specialty: "T-Shirts & Hoodies",
+    rating: 4.7,
+    active: true
+  },
+  {
+    id: 8,
+    name: "Bow River Printing",
+    lat: 51.0486,
+    lng: -114.0708,
+    address: "456 8th Ave SW, Calgary, AB",
+    specialty: "Business Cards & Flyers",
+    rating: 4.8,
+    active: true
+  },
+  {
+    id: 9,
+    name: "Kensington Print Studio",
+    lat: 51.0515,
+    lng: -114.0832,
+    address: "789 Kensington Rd NW, Calgary, AB",
+    specialty: "Artisan Crafts",
+    rating: 4.6,
+    active: true
+  },
+  {
+    id: 10,
+    name: "Capital Print Co.",
+    lat: 45.4215,
+    lng: -75.6972,
+    address: "123 Bank St, Ottawa, ON",
+    specialty: "Government Printing",
+    rating: 4.8,
+    active: true
+  }
+];
 
 interface PrintShop {
   id: number;
@@ -41,9 +144,9 @@ function Extension() {
   const cartLines = useCartLines();
   const attributes = useAttributes();
 
-  // Parse CSV data
+  // Use the hardcoded print shop data
   const parsedPrintShops = useMemo(() => {
-    return printShopsData
+    return PRINT_SHOPS_DATA
       .filter(shop => shop.active !== false)
       .map(shop => ({
         id: parseInt(shop.id),
