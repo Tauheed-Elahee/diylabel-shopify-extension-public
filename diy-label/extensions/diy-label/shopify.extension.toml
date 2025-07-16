@@ -22,8 +22,3 @@ target = "purchase.checkout.block.render"
 # Gives your extension access to directly query Shopify's storefront API.
 # https://shopify.dev/docs/api/checkout-ui-extensions/unstable/configuration#api-access
 api_access = true
-
-# Gives your extension access to make external network calls, using the
-# JavaScript `fetch()` API. Learn more:
-# https://shopify.dev/docs/api/checkout-ui-extensions/unstable/configuration#network-access
-network_access = true

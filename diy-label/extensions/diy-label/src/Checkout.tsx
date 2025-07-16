@@ -23,21 +23,91 @@ interface PrintShop {
   id: number;
   name: string;
   address: string;
+  city: string;
+  state: string;
+  zip: string;
   lat: number;
   lng: number;
   specialty: string;
   rating: number;
-  distance_km?: number;
   phone?: string;
   email?: string;
 }
 
-interface PrintShopResponse {
-  printShops: PrintShop[];
-  center: { lat: number; lng: number };
-  radius: number;
-  count: number;
-}
+// Static print shop data - in production, this could be loaded from a CSV file
+// or generated during build time
+const PRINT_SHOPS_DATA: PrintShop[] = [
+  {
+    id: 1,
+    name: "Local Print Co",
+    address: "123 Main St",
+    city: "San Francisco",
+    state: "CA",
+    zip: "94102",
+    lat: 37.7749,
+    lng: -122.4194,
+    specialty: "Screen Printing",
+    rating: 4.8,
+    phone: "(415) 555-0123",
+    email: "info@localprintco.com"
+  },
+  {
+    id: 2,
+    name: "Community Print Shop",
+    address: "456 Oak Ave",
+    city: "Oakland",
+    state: "CA", 
+    zip: "94601",
+    lat: 37.8044,
+    lng: -122.2712,
+    specialty: "Embroidery & DTG",
+    rating: 4.6,
+    phone: "(510) 555-0456",
+    email: "hello@communityprint.com"
+  },
+  {
+    id: 3,
+    name: "Sustainable Prints",
+    address: "789 Green St",
+    city: "Berkeley",
+    state: "CA",
+    zip: "94704",
+    lat: 37.8715,
+    lng: -122.2730,
+    specialty: "Eco-Friendly Printing",
+    rating: 4.9,
+    phone: "(510) 555-0789",
+    email: "eco@sustainableprints.com"
+  },
+  {
+    id: 4,
+    name: "Artisan Apparel",
+    address: "321 Castro St",
+    city: "San Francisco",
+    state: "CA",
+    zip: "94114",
+    lat: 37.7609,
+    lng: -122.4350,
+    specialty: "Custom Design & Print",
+    rating: 4.7,
+    phone: "(415) 555-0321",
+    email: "create@artisanapparel.com"
+  },
+  {
+    id: 5,
+    name: "Quick Print Solutions",
+    address: "654 Mission St",
+    city: "San Francisco",
+    state: "CA",
+    zip: "94105",
+    lat: 37.7879,
+    lng: -122.4075,
+    specialty: "Fast Turnaround",
+    rating: 4.4,
+    phone: "(415) 555-0654",
+    email: "orders@quickprintsf.com"
+  }
+];
 
 function Extension() {
   const translate = useTranslate();
@@ -74,6 +144,19 @@ function Extension() {
     return null;
   }
 
+  // Calculate distance between two points using Haversine formula
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // Distance in kilometers
+  };
+
   // Get location from Shopify checkout data
   const getLocationFromCheckout = async (): Promise<{ lat: number; lng: number } | null> => {
     try {
@@ -107,16 +190,16 @@ function Extension() {
 
       // Priority 1: Delivery address from deliveryGroups
       const deliveryAddress = checkoutData?.data?.deliveryGroups?.[0]?.deliveryAddress;
-      if (deliveryAddress && deliveryAddress.address1) {
+      if (deliveryAddress && deliveryAddress.city && deliveryAddress.provinceCode) {
         console.log('Using delivery address from deliveryGroups:', deliveryAddress);
-        return await geocodeAddress(deliveryAddress);
+        return await geocodeAddressLocally(deliveryAddress);
       }
 
       // Priority 2: Buyer identity delivery preferences
       const buyerAddress = checkoutData?.data?.buyerIdentity?.deliveryAddressPreferences?.[0];
-      if (buyerAddress && buyerAddress.address1) {
+      if (buyerAddress && buyerAddress.city && buyerAddress.provinceCode) {
         console.log('Using address from buyerIdentity:', buyerAddress);
-        return await geocodeAddress(buyerAddress);
+        return await geocodeAddressLocally(buyerAddress);
       }
 
       console.log('No address found in checkout data');
@@ -127,44 +210,41 @@ function Extension() {
     }
   };
 
-  // Geocode address using backend service
-  const geocodeAddress = async (address: any): Promise<{ lat: number; lng: number } | null> => {
-    try {
-      const addressString = [
-        address.address1,
-        address.address2,
-        address.city,
-        address.provinceCode || address.province,
-        address.countryCode || address.country,
-        address.zip
-      ].filter(Boolean).join(', ');
-
-      console.log('Geocoding address:', addressString);
-
-      // Get shop domain from checkout context
-      const shopDomain = window.location.hostname;
+  // Simple local geocoding for major cities (in production, you'd want a more comprehensive solution)
+  const geocodeAddressLocally = async (address: any): Promise<{ lat: number; lng: number } | null> => {
+    const cityCoordinates: { [key: string]: { lat: number; lng: number } } = {
+      // California
+      'san francisco,ca': { lat: 37.7749, lng: -122.4194 },
+      'oakland,ca': { lat: 37.8044, lng: -122.2712 },
+      'berkeley,ca': { lat: 37.8715, lng: -122.2730 },
+      'san jose,ca': { lat: 37.3382, lng: -121.8863 },
+      'sacramento,ca': { lat: 38.5816, lng: -121.4944 },
       
-      const params = new URLSearchParams({
-        address: addressString
-      });
-
-      const response = await fetch(`/api/geocode?${params.toString()}`);
+      // New York
+      'new york,ny': { lat: 40.7128, lng: -74.0060 },
+      'brooklyn,ny': { lat: 40.6782, lng: -73.9442 },
+      'queens,ny': { lat: 40.7282, lng: -73.7949 },
       
-      if (!response.ok) {
-        throw new Error('Geocoding request failed');
-      }
-
-      const data = await response.json();
+      // Other major cities
+      'chicago,il': { lat: 41.8781, lng: -87.6298 },
+      'houston,tx': { lat: 29.7604, lng: -95.3698 },
+      'phoenix,az': { lat: 33.4484, lng: -112.0740 },
+      'philadelphia,pa': { lat: 39.9526, lng: -75.1652 },
+      'san antonio,tx': { lat: 29.4241, lng: -98.4936 },
+      'san diego,ca': { lat: 32.7157, lng: -117.1611 },
+      'dallas,tx': { lat: 32.7767, lng: -96.7970 },
+      'austin,tx': { lat: 30.2672, lng: -97.7431 },
       
-      if (data.lat && data.lng) {
-        console.log('Geocoded coordinates:', data);
-        return { lat: data.lat, lng: data.lng };
-      }
-    } catch (error) {
-      console.error('Geocoding failed:', error);
-    }
-    
-    return null;
+      // Canada
+      'toronto,on': { lat: 43.6532, lng: -79.3832 },
+      'vancouver,bc': { lat: 49.2827, lng: -123.1207 },
+      'montreal,qc': { lat: 45.5017, lng: -73.5673 },
+      'calgary,ab': { lat: 51.0447, lng: -114.0719 },
+      'ottawa,on': { lat: 45.4215, lng: -75.6972 },
+    };
+
+    const cityKey = `${address.city?.toLowerCase()},${address.provinceCode?.toLowerCase()}`;
+    return cityCoordinates[cityKey] || null;
   };
 
   // Get user location via browser geolocation (fallback)
@@ -208,39 +288,15 @@ function Extension() {
     });
   };
 
-  // Fetch print shops from API
-  const fetchPrintShops = async (location: { lat: number; lng: number }) => {
-    try {
-      setLoading(true);
-      setError("");
-
-      // Get shop domain from checkout context
-      const shopDomain = window.location.hostname;
-      
-      const params = new URLSearchParams({
-        lat: location.lat.toString(),
-        lng: location.lng.toString(),
-        radius: '25'
-      });
-
-      const response = await fetch(`/api/print-shops/nearby?${params.toString()}`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch print shops');
-      }
-
-      const data: PrintShopResponse = await response.json();
-      setPrintShops(data.printShops || []);
-      
-      if (data.printShops.length === 0) {
-        setError('No print shops found within 25 miles of your location');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load print shops');
-      setPrintShops([]);
-    } finally {
-      setLoading(false);
-    }
+  // Filter and sort print shops by distance
+  const filterPrintShopsByLocation = (location: { lat: number; lng: number }, maxDistance: number = 50): PrintShop[] => {
+    return PRINT_SHOPS_DATA
+      .map(shop => ({
+        ...shop,
+        distance: calculateDistance(location.lat, location.lng, shop.lat, shop.lng)
+      }))
+      .filter(shop => shop.distance <= maxDistance)
+      .sort((a, b) => a.distance - b.distance);
   };
 
   // Load print shops with improved location detection
@@ -265,7 +321,9 @@ function Extension() {
             console.log('Got browser location:', location);
           } catch (geoError) {
             console.error('Browser geolocation failed:', geoError);
-            setError('Please enter your shipping address to find nearby print shops');
+            // If all location methods fail, show all print shops
+            console.log('Using all print shops as fallback');
+            setPrintShops(PRINT_SHOPS_DATA);
             setLoading(false);
             return;
           }
@@ -273,12 +331,20 @@ function Extension() {
         
         if (location) {
           setUserLocation(location);
-          await fetchPrintShops(location);
+          const nearbyShops = filterPrintShopsByLocation(location);
+          setPrintShops(nearbyShops);
+          
+          if (nearbyShops.length === 0) {
+            setError('No print shops found within 50km of your location');
+          }
         }
         
       } catch (error) {
         console.error('Error loading print shops:', error);
         setError('Failed to load print shops');
+        // Fallback to showing all shops
+        setPrintShops(PRINT_SHOPS_DATA);
+      } finally {
         setLoading(false);
       }
     };
@@ -318,7 +384,7 @@ function Extension() {
       await applyAttributeChange({
         key: "diy_label_print_shop_address",
         type: "updateAttribute",
-        value: shop.address,
+        value: `${shop.address}, ${shop.city}, ${shop.state} ${shop.zip}`,
       });
 
       if (userLocation) {
@@ -365,10 +431,15 @@ function Extension() {
   // Prepare select options
   const selectOptions = [
     { value: "", label: translate("choosePrintShop") },
-    ...printShops.map(shop => ({
-      value: shop.id.toString(),
-      label: `${shop.name} - ${shop.address} ${shop.distance_km ? `(${shop.distance_km.toFixed(1)} km)` : ''}`
-    }))
+    ...printShops.map(shop => {
+      const distance = userLocation ? 
+        ` (${calculateDistance(userLocation.lat, userLocation.lng, shop.lat, shop.lng).toFixed(1)}km)` : 
+        '';
+      return {
+        value: shop.id.toString(),
+        label: `${shop.name} - ${shop.city}, ${shop.state}${distance}`
+      };
+    })
   ];
 
   // If already enabled, show current selection
@@ -433,14 +504,21 @@ function Extension() {
                 const shop = printShops.find(s => s.id.toString() === selectedPrintShop);
                 if (!shop) return null;
                 
+                const distance = userLocation ? 
+                  calculateDistance(userLocation.lat, userLocation.lng, shop.lat, shop.lng) : 
+                  null;
+                
                 return (
                   <>
                     <Text emphasis="bold">{shop.name}</Text>
-                    <Text>{shop.address}</Text>
+                    <Text>{shop.address}, {shop.city}, {shop.state} {shop.zip}</Text>
                     <Text>Specialty: {shop.specialty}</Text>
                     <Text>Rating: ⭐ {shop.rating}/5</Text>
-                    {shop.distance_km && (
-                      <Text>Distance: {shop.distance_km.toFixed(1)} km</Text>
+                    {distance && (
+                      <Text>Distance: {distance.toFixed(1)} km</Text>
+                    )}
+                    {shop.phone && (
+                      <Text>Phone: {shop.phone}</Text>
                     )}
                   </>
                 );
@@ -448,6 +526,12 @@ function Extension() {
             </BlockStack>
           )}
         </BlockStack>
+      )}
+
+      {!loading && printShops.length === 0 && (
+        <Banner status="warning">
+          <Text>{translate("noPrintShopsFound")}</Text>
+        </Banner>
       )}
     </BlockStack>
   );
