@@ -4,6 +4,8 @@ import {
   BlockStack,
   Text,
   Select,
+  useShippingAddress,
+  useSelectedShippingOption,
   useTranslate,
   useDeliveryGroups
 } from "@shopify/ui-extensions-react/checkout";
@@ -17,6 +19,7 @@ export default reactExtension(
 function Extension() {
   const translate = useTranslate();
   const deliveryGroups = useDeliveryGroups();
+  const selectedShippingOption = useSelectedShippingOption();
   const [selectedPrintShop, setSelectedPrintShop] = useState("");
 
   // Hardcoded print shop data
@@ -49,9 +52,13 @@ function Extension() {
   // Check if shipping address has been entered
   const hasShippingAddress = deliveryGroups.length > 0 && 
                             deliveryGroups[0]?.deliveryAddress !== undefined;
+  
+  // Check if Local delivery is selected
+  const isLocalDeliverySelected = selectedShippingOption?.handle?.includes('local') || 
+                                 selectedShippingOption?.title?.toLowerCase().includes('local');
 
-  // If no shipping address, don't show the print shop selection
-  if (!hasShippingAddress) {
+  // If no shipping address or Local delivery is not selected, don't show the print shop selection
+  if (!hasShippingAddress || !isLocalDeliverySelected) {
     return null;
   }
 
@@ -67,29 +74,33 @@ function Extension() {
       </Banner>
 
       <BlockStack spacing="base">
-        <Text emphasis="bold">{translate("selectPrintShop")}</Text>
-        
-        <Select
-          label="Print Shop"
-          value={selectedPrintShop}
-          onChange={handlePrintShopChange}
-          options={selectOptions}
-        />
+        {isLocalDeliverySelected && (
+          <>
+            <Text emphasis="bold">{translate("selectPrintShop")}</Text>
+            
+            <Select
+              label="Print Shop"
+              value={selectedPrintShop}
+              onChange={handlePrintShopChange}
+              options={selectOptions}
+            />
 
-        {selectedPrintShop && (
-          <BlockStack spacing="tight">
-            {(() => {
-              const shop = printShops.find(s => s.id === selectedPrintShop);
-              if (!shop) return null;
-              
-              return (
-                <>
-                  <Text emphasis="bold">{shop.name}</Text>
-                  <Text>{shop.address}</Text>
-                </>
-              );
-            })()}
-          </BlockStack>
+            {selectedPrintShop && (
+              <BlockStack spacing="tight">
+                {(() => {
+                  const shop = printShops.find(s => s.id === selectedPrintShop);
+                  if (!shop) return null;
+                  
+                  return (
+                    <>
+                      <Text emphasis="bold">{shop.name}</Text>
+                      <Text>{shop.address}</Text>
+                    </>
+                  );
+                })()}
+              </BlockStack>
+            )}
+          </>
         )}
       </BlockStack>
     </BlockStack>
