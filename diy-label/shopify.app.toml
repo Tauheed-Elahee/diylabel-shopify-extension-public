@@ -3,7 +3,7 @@
 client_id = "f503cdb124d31ddda41aa93760f8d8f9"
 name = "diy-label"
 handle = "diy-label"
-application_url = "https://bottom-wet-owned-larger.trycloudflare.com"
+application_url = "https://shows-pierce-delaware-thee.trycloudflare.com"
 embedded = true
 
 [build]
@@ -30,7 +30,7 @@ api_version = "2025-04"
 scopes = "write_products,read_products,read_orders,write_orders"
 
 [auth]
-redirect_urls = ["https://bottom-wet-owned-larger.trycloudflare.com/auth/callback", "https://bottom-wet-owned-larger.trycloudflare.com/auth/shopify/callback", "https://bottom-wet-owned-larger.trycloudflare.com/api/auth/callback"]
+redirect_urls = ["https://shows-pierce-delaware-thee.trycloudflare.com/auth/callback", "https://shows-pierce-delaware-thee.trycloudflare.com/auth/shopify/callback", "https://shows-pierce-delaware-thee.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false

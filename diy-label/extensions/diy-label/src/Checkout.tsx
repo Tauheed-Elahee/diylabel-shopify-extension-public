@@ -5,6 +5,7 @@ import {
   Text,
   Select,
   useTranslate,
+  useShippingAddress,
 } from "@shopify/ui-extensions-react/checkout";
 import { useState } from "react";
 
@@ -44,6 +45,14 @@ function Extension() {
     setSelectedPrintShop(value);
   };
 
+  // Check if Shipping Address has been entered
+  const shippingAddress = useShippingAddress();
+
+  // Only render your component if the address has been entered
+  if (!shippingAddress || !shippingAddress.address1) {
+    return null;
+  }
+
   return (
     <BlockStack spacing="base">
       <Banner status="info">
@@ -57,7 +66,7 @@ function Extension() {
 
       <BlockStack spacing="base">
         <Text emphasis="bold">{translate("selectPrintShop")}</Text>
-        
+
         <Select
           label="Print Shop"
           value={selectedPrintShop}
@@ -70,7 +79,7 @@ function Extension() {
             {(() => {
               const shop = printShops.find(s => s.id === selectedPrintShop);
               if (!shop) return null;
-              
+
               return (
                 <>
                   <Text emphasis="bold">{shop.name}</Text>
