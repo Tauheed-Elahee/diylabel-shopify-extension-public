@@ -5,6 +5,7 @@ import {
   Text,
   Select,
   useTranslate,
+  useDeliveryGroups
 } from "@shopify/ui-extensions-react/checkout";
 import { useState } from "react";
 
@@ -15,6 +16,7 @@ export default reactExtension(
 
 function Extension() {
   const translate = useTranslate();
+  const deliveryGroups = useDeliveryGroups();
   const [selectedPrintShop, setSelectedPrintShop] = useState("");
 
   // Hardcoded print shop data
@@ -43,6 +45,15 @@ function Extension() {
   const handlePrintShopChange = (value: string) => {
     setSelectedPrintShop(value);
   };
+
+  // Check if shipping address has been entered
+  const hasShippingAddress = deliveryGroups.length > 0 && 
+                            deliveryGroups[0]?.deliveryAddress !== undefined;
+
+  // If no shipping address, don't show the print shop selection
+  if (!hasShippingAddress) {
+    return null;
+  }
 
   return (
     <BlockStack spacing="base">
