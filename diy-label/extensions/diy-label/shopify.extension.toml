@@ -13,7 +13,7 @@ type = "ui_extension"
 # Controls where in Shopify your extension will be injected,
 # and the file that contains your extension's source code.
 [[extensions.targeting]]
-module = "./src/Checkout.tsx"
+module = "./src/local-delivery.tsx"
 target = "purchase.checkout.shipping-option-list.render-after"
 
 [extensions.capabilities]
