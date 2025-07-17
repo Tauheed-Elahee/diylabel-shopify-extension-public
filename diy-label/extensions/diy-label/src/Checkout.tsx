@@ -4,13 +4,9 @@ import {
   BlockStack,
   Text,
   Select,
-  Button,
-  useApi,
-  useDeliveryGroups,
   useTranslate,
-  useCartLines,
 } from "@shopify/ui-extensions-react/checkout";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export default reactExtension(
   "purchase.checkout.shipping-option-list.render-after",
@@ -19,13 +15,7 @@ export default reactExtension(
 
 function Extension() {
   const translate = useTranslate();
-  const { query } = useApi();
-  const deliveryGroups = useDeliveryGroups();
-  const cartLines = useCartLines();
-  
   const [selectedPrintShop, setSelectedPrintShop] = useState("");
-  const [isLocalDeliverySelected, setIsLocalDeliverySelected] = useState(false);
-  const [loading, setLoading] = useState(true);
 
   // Hardcoded print shop data
   const printShops = [
@@ -41,58 +31,6 @@ function Extension() {
     { id: "10", name: "Stampede Print Co.", address: "123 17th Ave SW, Calgary, AB" }
   ];
 
-  // Check if shipping address has been entered
-  const hasShippingAddress = deliveryGroups.length > 0 && 
-                            deliveryGroups[0]?.deliveryAddress !== undefined;
-
-  // Check for selected delivery method
-  useEffect(() => {
-    if (!hasShippingAddress || cartLines.length === 0) {
-      setLoading(false);
-      return;
-    }
-
-    const checkDeliveryMethod = async () => {
-      try {
-        setLoading(true);
-        
-        // Query the selected delivery option
-        const result = await query(`
-          query {
-            deliveryGroups {
-              selectedDeliveryOption {
-                handle
-                type
-              }
-            }
-          }
-        `);
-
-        const selectedOption = result?.data?.deliveryGroups?.[0]?.selectedDeliveryOption;
-        
-        // Check if local delivery is selected by checking the type
-        // The type field should contain the delivery method type (LOCAL, SHIPPING, PICKUP, etc.)
-        const isLocal = selectedOption && 
-          (selectedOption.type === 'LOCAL' || 
-           selectedOption.handle?.includes('local'));
-        
-        setIsLocalDeliverySelected(!!isLocal);
-      } catch (error) {
-        console.error('Error checking delivery method:', error);
-        // If we can't determine the delivery method, default to showing the component
-        setIsLocalDeliverySelected(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkDeliveryMethod();
-  }, [hasShippingAddress, query, deliveryGroups, cartLines]);
-
-  const handlePrintShopChange = (value: string) => {
-    setSelectedPrintShop(value);
-  };
-
   // Prepare select options
   const selectOptions = [
     { value: "", label: translate("choosePrintShop") },
@@ -102,12 +40,10 @@ function Extension() {
     }))
   ];
 
-  // If no shipping address or loading, don't show the component
-  if (!hasShippingAddress || loading) {
-    return null;
-  }
+  const handlePrintShopChange = (value: string) => {
+    setSelectedPrintShop(value);
+  };
 
-  // Always show the banner
   return (
     <BlockStack spacing="base">
       <Banner status="info">
@@ -119,35 +55,32 @@ function Extension() {
         </BlockStack>
       </Banner>
 
-      {/* Only show print shop selection if local delivery is selected */}
-      {isLocalDeliverySelected && (
-        <BlockStack spacing="base">
-          <Text emphasis="bold">{translate("selectPrintShop")}</Text>
-          
-          <Select
-            label="Print Shop"
-            value={selectedPrintShop}
-            onChange={handlePrintShopChange}
-            options={selectOptions}
-          />
+      <BlockStack spacing="base">
+        <Text emphasis="bold">{translate("selectPrintShop")}</Text>
+        
+        <Select
+          label="Print Shop"
+          value={selectedPrintShop}
+          onChange={handlePrintShopChange}
+          options={selectOptions}
+        />
 
-          {selectedPrintShop && (
-            <BlockStack spacing="tight">
-              {(() => {
-                const shop = printShops.find(s => s.id === selectedPrintShop);
-                if (!shop) return null;
-                
-                return (
-                  <>
-                    <Text emphasis="bold">{shop.name}</Text>
-                    <Text>{shop.address}</Text>
-                  </>
-                );
-              })()}
-            </BlockStack>
-          )}
-        </BlockStack>
-      )}
+        {selectedPrintShop && (
+          <BlockStack spacing="tight">
+            {(() => {
+              const shop = printShops.find(s => s.id === selectedPrintShop);
+              if (!shop) return null;
+              
+              return (
+                <>
+                  <Text emphasis="bold">{shop.name}</Text>
+                  <Text>{shop.address}</Text>
+                </>
+              );
+            })()}
+          </BlockStack>
+        )}
+      </BlockStack>
     </BlockStack>
   );
 }
