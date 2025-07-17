@@ -6,6 +6,8 @@ import {
   Select,
   useTranslate,
   useShippingAddress,
+  useDeliveryGroups,
+  useDeliveryGroup,
 } from "@shopify/ui-extensions-react/checkout";
 import { useState } from "react";
 
@@ -48,6 +50,10 @@ function Extension() {
   // Check if Shipping Address has been entered
   const shippingAddress = useShippingAddress();
 
+  // Check Delivery Option
+  const deliveryGroups = useDeliveryGroups();
+  const selectedOption = useDeliveryGroup(deliveryGroups[0])?.selectedDeliveryOption;
+
   // Only render your component if the address has been entered
   if (!shippingAddress || !shippingAddress.address1) {
     return null;
@@ -64,32 +70,40 @@ function Extension() {
         </BlockStack>
       </Banner>
 
-      <BlockStack spacing="base">
-        <Text emphasis="bold">{translate("selectPrintShop")}</Text>
+      <>
+        {selectedOption && selectedOption?.title === 'Local Delivery' && (
+          <BlockStack spacing="base">
+            <Text emphasis="bold">{translate("selectPrintShop")}</Text>
 
-        <Select
-          label="Print Shop"
-          value={selectedPrintShop}
-          onChange={handlePrintShopChange}
-          options={selectOptions}
-        />
+            <Select
+              label="Local Partner Shop"
+              value={selectedPrintShop}
+              onChange={handlePrintShopChange}
+              options={selectOptions}
+            />
 
-        {selectedPrintShop && (
-          <BlockStack spacing="tight">
-            {(() => {
-              const shop = printShops.find(s => s.id === selectedPrintShop);
-              if (!shop) return null;
+            {selectedPrintShop && (
+              <BlockStack spacing="tight">
+                {(() => {
+                  const shop = printShops.find(s => s.id === selectedPrintShop);
+                  if (!shop) return null;
 
-              return (
-                <>
-                  <Text emphasis="bold">{shop.name}</Text>
-                  <Text>{shop.address}</Text>
-                </>
-              );
-            })()}
+                  return (
+                    <>
+                      <Banner status="success">
+                        <BlockStack spacing="tight">
+                          <Text emphasis="bold">{shop.name}</Text>
+                          <Text>{shop.address}</Text>
+                        </BlockStack>
+                      </Banner>
+                    </>
+                  );
+                })()}
+              </BlockStack>
+            )}
           </BlockStack>
         )}
-      </BlockStack>
+      </>
     </BlockStack>
   );
 }
