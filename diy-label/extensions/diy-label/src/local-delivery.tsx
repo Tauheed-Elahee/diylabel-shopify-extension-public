@@ -42,8 +42,8 @@ function Extension() {
         setError("");
         
         // Use hardcoded print shops for now since API URL changes
-        // Use environment variable for API URL, fallback to current tunnel for development
-        const apiUrl = process.env.SHOPIFY_APP_URL || 'https://traveling-dash-investigator-startup.trycloudflare.com';
+        // Use stable Shopify app URL
+        const apiUrl = 'https://diy-label.shopify.app';
         
         const response = await fetch(
           `${apiUrl}/api/print-shops/nearby?lat=43.6532&lng=-79.3832&radius=50`
