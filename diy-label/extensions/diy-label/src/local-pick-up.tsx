@@ -42,18 +42,19 @@ function Extension() {
         setLoading(true);
         setError("");
         
-        // Use a default location (Toronto) for now
-        // In a real implementation, you'd get the user's location
-        const response = await fetch(
-          `https://traveling-dash-investigator-startup.trycloudflare.com/api/print-shops/nearby?lat=43.6532&lng=-79.3832&radius=50`
-        );
+        // Use hardcoded print shops for now since API URL changes
+        // In production, you'd configure a stable API endpoint
+        const mockPrintShops = [
+          { id: 10, name: "Capital Print Co.", address: "123 Bank St, Ottawa, ON", specialty: "Government Printing", rating: 4.8, distance_km: 2.1 },
+          { id: 11, name: "ByWard Print Solutions", address: "456 Somerset St, Ottawa, ON", specialty: "Custom Designs", rating: 4.9, distance_km: 3.2 },
+          { id: 12, name: "Rideau Print Centre", address: "321 Rideau St, Ottawa, ON", specialty: "Quick Service", rating: 4.5, distance_km: 1.8 },
+          { id: 1, name: "Toronto Print Hub", address: "123 Queen St W, Toronto, ON", specialty: "T-Shirts & Hoodies", rating: 4.8, distance_km: 450.2 },
+          { id: 2, name: "King Street Printing", address: "456 King St W, Toronto, ON", specialty: "Business Cards & Flyers", rating: 4.9, distance_km: 451.1 }
+        ];
         
-        if (!response.ok) {
-          throw new Error('Failed to fetch print shops');
-        }
-        
-        const data = await response.json();
-        setPrintShops(data.printShops || []);
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setPrintShops(mockPrintShops);
       } catch (err) {
         console.error('Error fetching print shops:', err);
         setError('Failed to load print shops');
