@@ -41,12 +41,10 @@ function Extension() {
         setLoading(true);
         setError("");
         
-        // Use hardcoded print shops for now since API URL changes
-        // Use stable Shopify app URL
-        const apiUrl = 'https://diy-label.shopify.app';
+        // Use relative URL - works with any domain
         
         const response = await fetch(
-          `${apiUrl}/api/print-shops/nearby?lat=43.6532&lng=-79.3832&radius=50`
+          `/api/print-shops/nearby?lat=43.6532&lng=-79.3832&radius=50`
         );
         
         if (!response.ok) {
