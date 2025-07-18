@@ -43,23 +43,30 @@ function Extension() {
         setError("");
         
         // Use hardcoded print shops for now since API URL changes
-        // In production, you'd configure a stable API endpoint
-        const mockPrintShops = [
-          { id: 10, name: "Capital Print Co.", address: "123 Bank St, Ottawa, ON", specialty: "Government Printing", rating: 4.8, distance_km: 2.1 },
-          { id: 11, name: "ByWard Print Solutions", address: "456 Somerset St, Ottawa, ON", specialty: "Custom Designs", rating: 4.9, distance_km: 3.2 },
-          { id: 12, name: "Rideau Print Centre", address: "321 Rideau St, Ottawa, ON", specialty: "Quick Service", rating: 4.5, distance_km: 1.8 },
-          { id: 1, name: "Toronto Print Hub", address: "123 Queen St W, Toronto, ON", specialty: "T-Shirts & Hoodies", rating: 4.8, distance_km: 450.2 },
-          { id: 2, name: "King Street Printing", address: "456 King St W, Toronto, ON", specialty: "Business Cards & Flyers", rating: 4.9, distance_km: 451.1 }
-        ];
+        // Use environment variable for API URL, fallback to current tunnel for development
+        const apiUrl = process.env.SHOPIFY_APP_URL || 'https://traveling-dash-investigator-startup.trycloudflare.com';
         
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setPrintShops(mockPrintShops);
+        const response = await fetch(
+          `${apiUrl}/api/print-shops/nearby?lat=43.6532&lng=-79.3832&radius=50`
+        );
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        setPrintShops(data.printShops || []);
       } catch (err) {
         console.error('Error fetching print shops:', err);
-        setError('Failed to load print shops');
-        // Fallback to empty array
-        setPrintShops([]);
+        setError('Failed to load print shops. Please try again.');
+        
+        // Fallback to mock data for development
+        const fallbackShops = [
+          { id: 10, name: "Capital Print Co.", address: "123 Bank St, Ottawa, ON", specialty: "Government Printing", rating: 4.8, distance_km: 2.1 },
+          { id: 11, name: "ByWard Print Solutions", address: "456 Somerset St, Ottawa, ON", specialty: "Custom Designs", rating: 4.9, distance_km: 3.2 },
+          { id: 12, name: "Rideau Print Centre", address: "321 Rideau St, Ottawa, ON", specialty: "Quick Service", rating: 4.5, distance_km: 1.8 }
+        ];
+        setPrintShops(fallbackShops);
       } finally {
         setLoading(false);
       }
