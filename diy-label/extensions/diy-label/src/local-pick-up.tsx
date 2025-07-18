@@ -10,37 +10,69 @@ import {
   useDeliveryGroup,
   useDeliveryGroupListTarget,
 } from "@shopify/ui-extensions-react/checkout";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default reactExtension(
   "purchase.checkout.pickup-location-list.render-before",
   () => <Extension />
 );
 
+interface PrintShop {
+  id: number;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  specialty: string;
+  rating: number;
+  distance_km?: number;
+}
+
 function Extension() {
   const translate = useTranslate();
   const [selectedPrintShop, setSelectedPrintShop] = useState("");
+  const [printShops, setPrintShops] = useState<PrintShop[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  // Hardcoded print shop data
-  const printShops = [
-    { id: "1", name: "Toronto Print Hub", address: "123 Queen St W, Toronto, ON" },
-    { id: "2", name: "King Street Printing", address: "456 King St W, Toronto, ON" },
-    { id: "3", name: "Distillery Print Co.", address: "789 Front St E, Toronto, ON" },
-    { id: "4", name: "Impression Montréal", address: "321 Rue Saint-Denis, Montréal, QC" },
-    { id: "5", name: "Plateau Print Shop", address: "654 Avenue du Mont-Royal, Montréal, QC" },
-    { id: "6", name: "Granville Print Co.", address: "258 Granville St, Vancouver, BC" },
-    { id: "7", name: "Gastown Printing", address: "369 Water St, Vancouver, BC" },
-    { id: "8", name: "Commercial Drive Print", address: "741 Commercial Dr, Vancouver, BC" },
-    { id: "9", name: "Kitsilano Print Studio", address: "852 4th Ave W, Vancouver, BC" },
-    { id: "10", name: "Stampede Print Co.", address: "123 17th Ave SW, Calgary, AB" }
-  ];
+  // Fetch print shops from Supabase
+  useEffect(() => {
+    const fetchPrintShops = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        
+        // Use a default location (Toronto) for now
+        // In a real implementation, you'd get the user's location
+        const response = await fetch(
+          `https://traveling-dash-investigator-startup.trycloudflare.com/api/print-shops/nearby?lat=43.6532&lng=-79.3832&radius=50`
+        );
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch print shops');
+        }
+        
+        const data = await response.json();
+        setPrintShops(data.printShops || []);
+      } catch (err) {
+        console.error('Error fetching print shops:', err);
+        setError('Failed to load print shops');
+        // Fallback to empty array
+        setPrintShops([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPrintShops();
+  }, []);
 
   // Prepare select options
   const selectOptions = [
     { value: "", label: translate("choosePrintShop") },
     ...printShops.map(shop => ({
-      value: shop.id,
-      label: shop.name
+      value: shop.id.toString(),
+      label: `${shop.name}${shop.distance_km ? ` (${shop.distance_km.toFixed(1)}km)` : ''}`
     }))
   ];
 
@@ -58,20 +90,33 @@ function Extension() {
           </Text>
         </BlockStack>
       </Banner>
+      
+      {error && (
+        <Banner status="critical">
+          <Text>{error}</Text>
+        </Banner>
+      )}
+      
+      {loading && (
+        <Text>Loading print shops...</Text>
+      )}
+      
       <BlockStack spacing="base">
         <Text emphasis="bold">{translate("selectPrintShop")}</Text>
 
-        <Select
-          label="Local Partner Shop"
-          value={selectedPrintShop}
-          onChange={handlePrintShopChange}
-          options={selectOptions}
-        />
+        {!loading && !error && (
+          <Select
+            label="Local Partner Shop"
+            value={selectedPrintShop}
+            onChange={handlePrintShopChange}
+            options={selectOptions}
+          />
+        )}
 
         {selectedPrintShop && (
           <BlockStack spacing="tight">
             {(() => {
-              const shop = printShops.find(s => s.id === selectedPrintShop);
+              const shop = printShops.find(s => s.id.toString() === selectedPrintShop);
               if (!shop) return null;
 
               return (
@@ -80,6 +125,11 @@ function Extension() {
                     <BlockStack spacing="tight">
                       <Text emphasis="bold">{shop.name}</Text>
                       <Text>{shop.address}</Text>
+                      <Text>Specialty: {shop.specialty}</Text>
+                      <Text>Rating: ⭐ {shop.rating}/5</Text>
+                      {shop.distance_km && (
+                        <Text>Distance: {shop.distance_km.toFixed(1)} km</Text>
+                      )}
                     </BlockStack>
                   </Banner>
                 </>
