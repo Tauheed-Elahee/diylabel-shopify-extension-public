@@ -13,7 +13,7 @@ import {
 import { useState } from "react";
 
 export default reactExtension(
-  "purchase.checkout.pickup-location-list.render-after",
+  "purchase.checkout.pickup-location-list.render-before",
   () => <Extension />
 );
 
@@ -48,29 +48,16 @@ function Extension() {
     setSelectedPrintShop(value);
   };
 
-  // Check if Shipping Address has been entered
-  const shippingAddress = useShippingAddress();
-
-  // Check Delivery Option
-  const deliveryGroups = useDeliveryGroups();
-  const selectedOption = useDeliveryGroup(deliveryGroups[0])?.selectedDeliveryOption;
-
-  // Only render your component if the address has been entered
-  if (!shippingAddress || !shippingAddress.address1) {
-    return null;
-  }
-
-  const { selectedDeliveryOption } = useDeliveryGroupListTarget();
-
   return (
-    <Banner status="info">
-      <BlockStack>
-        <Text>
-           {selectedDeliveryOption
-            ? `Selected delivery option type: ${selectedDeliveryOption.type}`
-            : 'No delivery option selected'}
-        </Text>
-      </BlockStack>
-    </Banner>
+    <BlockStack spacing="base">
+      <Banner status="info">
+        <BlockStack spacing="tight">
+          <Text emphasis="bold">🌱 {translate("localPrintingAvailable")}</Text>
+          <Text>
+            {translate("supportLocalCommunity")}
+          </Text>
+        </BlockStack>
+      </Banner>
+    </BlockStack>
   );
 }

@@ -3,7 +3,7 @@
 client_id = "f503cdb124d31ddda41aa93760f8d8f9"
 name = "diy-label"
 handle = "diy-label"
-application_url = "https://conf-intervals-delays-biol.trycloudflare.com"
+application_url = "https://employer-boot-mails-plant.trycloudflare.com"
 embedded = true
 
 [build]
@@ -30,7 +30,7 @@ api_version = "2025-04"
 scopes = "write_products,read_products,read_orders,write_orders"
 
 [auth]
-redirect_urls = ["https://conf-intervals-delays-biol.trycloudflare.com/auth/callback", "https://conf-intervals-delays-biol.trycloudflare.com/auth/shopify/callback", "https://conf-intervals-delays-biol.trycloudflare.com/api/auth/callback"]
+redirect_urls = ["https://employer-boot-mails-plant.trycloudflare.com/auth/callback", "https://employer-boot-mails-plant.trycloudflare.com/auth/shopify/callback", "https://employer-boot-mails-plant.trycloudflare.com/api/auth/callback"]
 
 [pos]
 embedded = false

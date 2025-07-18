@@ -18,7 +18,7 @@ target = "purchase.checkout.shipping-option-list.render-after"
 
 [[extensions.targeting]]
 module = "./src/local-pick-up.tsx"
-target = "purchase.checkout.pickup-location-list.render-after"
+target = "purchase.checkout.pickup-location-list.render-before"
 
 [extensions.capabilities]
 # Gives your extension access to directly query Shopify's storefront API.
