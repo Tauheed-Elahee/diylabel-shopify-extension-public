@@ -58,6 +58,36 @@ function Extension() {
           </Text>
         </BlockStack>
       </Banner>
+      <BlockStack spacing="base">
+        <Text emphasis="bold">{translate("selectPrintShop")}</Text>
+
+        <Select
+          label="Local Partner Shop"
+          value={selectedPrintShop}
+          onChange={handlePrintShopChange}
+          options={selectOptions}
+        />
+
+        {selectedPrintShop && (
+          <BlockStack spacing="tight">
+            {(() => {
+              const shop = printShops.find(s => s.id === selectedPrintShop);
+              if (!shop) return null;
+
+              return (
+                <>
+                  <Banner status="success">
+                    <BlockStack spacing="tight">
+                      <Text emphasis="bold">{shop.name}</Text>
+                      <Text>{shop.address}</Text>
+                    </BlockStack>
+                  </Banner>
+                </>
+              );
+            })()}
+          </BlockStack>
+        )}
+      </BlockStack>
     </BlockStack>
   );
 }
