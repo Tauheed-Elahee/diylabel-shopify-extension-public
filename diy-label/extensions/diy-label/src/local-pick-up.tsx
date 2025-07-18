@@ -43,10 +43,13 @@ function Extension() {
         setError("");
         
         // Use relative URL - works with any domain
+        // Get the current domain and construct absolute URL
+        const currentDomain = window.location.origin;
+        const apiUrl = `${currentDomain}/api/print-shops/nearby?lat=43.6532&lng=-79.3832&radius=50`;
         
-        const response = await fetch(
-          `/api/print-shops/nearby?lat=43.6532&lng=-79.3832&radius=50`
-        );
+        console.log('Fetching from:', apiUrl);
+        
+        const response = await fetch(apiUrl);
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
