@@ -1,0 +1,21 @@
+[build]
+  functions = "netlify/functions"
+  publish = "public"
+
+[functions]
+  directory = "netlify/functions"
+
+[[redirects]]
+  from = "/api/print-shops/nearby"
+  to = "/.netlify/functions/nearby-shops"
+  status = 200
+
+[[redirects]]
+  from = "/api/orders/diy-label"
+  to = "/.netlify/functions/diy-label-order"
+  status = 200
+
+[[redirects]]
+  from = "/webhooks/orders/paid"
+  to = "/.netlify/functions/shopify-order-webhook"
+  status = 200

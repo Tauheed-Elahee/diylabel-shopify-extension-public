@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIY Label API Functions</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .endpoint {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #007cba;
+        }
+        code {
+            background: #e8e8e8;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        .method {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            margin-right: 8px;
+        }
+        .get { background: #28a745; color: white; }
+        .post { background: #007cba; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🌱 DIY Label API Functions</h1>
+    <p>Netlify Functions for DIY Label Shopify integration</p>
+
+    <h2>📡 Available Endpoints</h2>
+
+    <div class="endpoint">
+        <h3><span class="method get">GET</span> Nearby Print Shops</h3>
+        <p><code>/.netlify/functions/nearby-shops</code></p>
+        <p><strong>Parameters:</strong> lat, lng, radius (optional)</p>
+        <p><strong>Example:</strong> <code>/.netlify/functions/nearby-shops?lat=37.7749&lng=-122.4194&radius=25</code></p>
+    </div>
+
+    <div class="endpoint">
+        <h3><span class="method post">POST</span> Create DIY Label Order</h3>
+        <p><code>/.netlify/functions/diy-label-order</code></p>
+        <p><strong>Body:</strong> JSON with shopifyOrderId, shopDomain, printShopId, productData, customerData</p>
+    </div>
+
+    <div class="endpoint">
+        <h3><span class="method post">POST</span> Shopify Order Webhook</h3>
+        <p><code>/.netlify/functions/shopify-order-webhook</code></p>
+        <p><strong>Purpose:</strong> Processes orders/paid webhooks from Shopify</p>
+    </div>
+
+    <div class="endpoint">
+        <h3><span class="method get">GET</span> Widget Data</h3>
+        <p><code>/.netlify/functions/widget-data</code></p>
+        <p><strong>Parameters:</strong> shop (required), product, lat, lng, radius</p>
+    </div>
+
+    <h2>🔗 Clean URLs</h2>
+    <p>You can also use these cleaner URLs thanks to redirects:</p>
+    <ul>
+        <li><code>/api/print-shops/nearby</code></li>
+        <li><code>/api/orders/diy-label</code></li>
+        <li><code>/webhooks/orders/paid</code></li>
+    </ul>
+
+    <h2>📚 Documentation</h2>
+    <p>See the <code>README.md</code> file for complete setup and usage instructions.</p>
+
+    <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; color: #666; text-align: center;">
+        <p>DIY Label - Connecting stores to local print shops for sustainable merch fulfillment</p>
+    </footer>
+</body>
+</html>

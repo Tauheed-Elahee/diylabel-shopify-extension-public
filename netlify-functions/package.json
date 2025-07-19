@@ -1,0 +1,19 @@
+{
+  "name": "diy-label-netlify-functions",
+  "version": "1.0.0",
+  "description": "Netlify Functions for DIY Label API endpoints",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm install",
+    "dev": "netlify dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  },
+  "keywords": ["netlify", "functions", "diy-label", "shopify"],
+  "author": "DIY Label",
+  "license": "MIT"
+}
