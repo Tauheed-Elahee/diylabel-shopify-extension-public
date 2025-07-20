@@ -41,10 +41,8 @@ function Extension() {
         setLoading(true);
         setError("");
         
-        // Use relative URL - works with any domain
-        // Get the current domain and construct absolute URL
-        const currentDomain = window.location.origin;
-        const apiUrl = `${currentDomain}/api/print-shops/nearby?lat=43.6532&lng=-79.3832&radius=50`;
+        // Use Netlify Functions endpoint
+        const apiUrl = `https://diylabel.netlify.app/.netlify/functions/nearby-shops?lat=43.6532&lng=-79.3832&radius=50`;
         
         console.log('Fetching from:', apiUrl);
         
