@@ -15,7 +15,7 @@
   "noPrintShopsFound": "No print shops found within 25 miles of your location",
   "failedToLoadPrintShops": "Failed to load print shops",
   "failedToSelectPrintShop": "Failed to select print shop. Please try again.",
-  "failedToRemoveLocalPrinting": "Failed to remove local printing option"
+  "failedToRemoveLocalPrinting": "Failed to remove local printing option",
   "usingCheckoutAddress": "Using your shipping address to find nearby print shops",
   "enterShippingAddress": "Please enter your shipping address to find nearby print shops",
   "confirmLocalPrinting": "Confirm Local Printing",
