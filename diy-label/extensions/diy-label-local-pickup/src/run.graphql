@@ -1,6 +1,6 @@
 query Input {
   cart {
-    attribute(key: "requestedFulfillmentType") {
+    attribute(key: "diy_label_enabled") {
       value
     }
     lines {
