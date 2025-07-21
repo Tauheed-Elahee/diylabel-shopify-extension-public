@@ -424,35 +424,6 @@ function Extension() {
   useEffect(() => {
     testAPIConnectivity();
   }, []);
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(orderData)
-      });
-
-      console.log('Response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Response error:', errorText);
-        throw new Error(`Failed to create order: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('DIY Label order created:', result);
-      
-      // Show success message
-      setError(''); // Clear any previous errors
-      // You could add a success state here if needed
-
-    } catch (error) {
-      console.error('Error creating DIY Label order:', error);
-      setError(`Failed to process DIY Label order: ${error.message}`);
-    } finally {
-      setOrderCreating(false);
-    }
-  };
 
   // Prepare select options
   const selectOptions = [
