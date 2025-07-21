@@ -181,7 +181,7 @@ Check console for detailed results.`);
 
           <div style={{ 
             padding: '20px', 
-            border: '1px solid '#28a745',
+            border: '1px solid \'#28a745',
             borderRadius: '8px'
           }}>
             <h3>2. Test API Connectivity</h3>
