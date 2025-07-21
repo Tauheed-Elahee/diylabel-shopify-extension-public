@@ -280,17 +280,26 @@ function Extension() {
 
   // Create order in Supabase when checkout is completed
   const createDIYLabelOrder = async () => {
-    if (!selectedPrintShop || orderCreating) return;
+    if (!selectedPrintShop || orderCreating) {
+      console.log('Cannot create order:', { selectedPrintShop: !!selectedPrintShop, orderCreating });
+      return;
+    }
 
     const shop = printShops.find(s => s.id.toString() === selectedPrintShop);
-    if (!shop) return;
+    if (!shop) {
+      console.error('Selected print shop not found:', selectedPrintShop);
+      setError('Selected print shop not found');
+      return;
+    }
 
     try {
       setOrderCreating(true);
+      setError(''); // Clear any previous errors
       console.log('Creating DIY Label order for shop:', shop);
 
-      // Use a hardcoded shop domain for now - this will be updated by webhook
-      const shopDomain = 'diy-label.myshopify.com';
+      // Extract shop domain from current URL or use default
+      const currentUrl = window.location?.hostname || 'diy-label.myshopify.com';
+      const shopDomain = currentUrl.includes('.myshopify.com') ? currentUrl : 'diy-label.myshopify.com';
 
       // Prepare order data
       const orderData = {
@@ -309,22 +318,112 @@ function Extension() {
           currency: cartLines[0]?.cost?.totalAmount?.currencyCode || 'USD'
         },
         customerData: {
-          name: 'Checkout Customer',
-          email: 'customer@checkout.com',
+          name: 'Checkout Extension Customer',
+          email: 'checkout-extension@example.com',
           shipping_address: shippingAddress,
           customer_location: addressString
         },
         options: {
           source: 'checkout_extension',
+          extension_version: '1.0',
           print_shop_selection: shop,
+          user_agent: navigator.userAgent,
           created_at: new Date().toISOString()
         }
       };
 
       console.log('Sending order data:', orderData);
 
-      // Send to Netlify function
-      const response = await fetch('https://diylabel.netlify.app/.netlify/functions/checkout-order', {
+      // Try multiple API endpoints for reliability
+      const apiEndpoints = [
+        'https://diylabel.netlify.app/.netlify/functions/checkout-order',
+        'https://diylabel.netlify.app/api/checkout/diy-label'
+      ];
+      
+      let response = null;
+      let lastError = null;
+      
+      for (const endpoint of apiEndpoints) {
+        try {
+          console.log('Trying endpoint:', endpoint);
+          response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify(orderData)
+          });
+          
+          console.log('Response from', endpoint, ':', response.status, response.statusText);
+          
+          if (response.ok) {
+            break; // Success, exit loop
+          } else {
+            const errorText = await response.text();
+            console.error('API error from', endpoint, ':', errorText);
+            lastError = new Error(`HTTP ${response.status}: ${errorText}`);
+          }
+        } catch (fetchError) {
+          console.error('Fetch error for', endpoint, ':', fetchError);
+          lastError = fetchError;
+          response = null;
+        }
+      }
+      
+      if (!response || !response.ok) {
+        throw lastError || new Error('All API endpoints failed');
+      }
+      
+      const result = await response.json();
+      console.log('DIY Label order created successfully:', result);
+      
+      if (result.success) {
+        // Show success message
+        setError(''); // Clear any previous errors
+        
+        // Update the UI to show success
+        const successMessage = `✅ Order created successfully!\n\nOrder ID: ${result.order.id}\nPrint Shop: ${result.order.printShop}\nStatus: ${result.order.status}`;
+        
+        // You could show this in the UI instead of alert
+        console.log('Success:', successMessage);
+        
+        // Optionally update the status display
+        // setError('Order created successfully! ✅');
+      } else {
+        throw new Error(result.error || 'Order creation failed');
+      }
+
+    } catch (error) {
+      console.error('Error creating DIY Label order:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setError(`Failed to create order: ${errorMessage}`);
+      
+      // Show user-friendly error
+      console.error('User-facing error:', errorMessage);
+    } finally {
+      setOrderCreating(false);
+    }
+  };
+
+  // Test function to verify API connectivity
+  const testAPIConnectivity = async () => {
+    try {
+      console.log('Testing API connectivity...');
+      const response = await fetch('https://diylabel.netlify.app/.netlify/functions/nearby-shops?lat=43.6532&lng=-79.3832&radius=25');
+      const data = await response.json();
+      console.log('API test successful:', data);
+      return true;
+    } catch (error) {
+      console.error('API test failed:', error);
+      return false;
+    }
+  };
+
+  // Test API connectivity on component mount
+  useEffect(() => {
+    testAPIConnectivity();
+  }, []);
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
