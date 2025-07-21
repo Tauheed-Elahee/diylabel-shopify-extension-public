@@ -94,7 +94,11 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 404,
         headers: corsHeaders,
-        body: JSON.stringify({ error: 'Store not found' })
+        body: JSON.stringify({ 
+          error: 'Store not found',
+          details: storeError?.message,
+          shopDomain: shopDomain
+        })
       };
     }
     console.log('Store found:', store.id);
@@ -105,7 +109,6 @@ exports.handler = async (event, context) => {
       .from('print_shops')
       .select('id, name, active')
       .eq('id', printShopId)
-      .eq('active', true)
       .single();
 
     if (printShopError || !printShop) {
@@ -113,7 +116,11 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 404,
         headers: corsHeaders,
-        body: JSON.stringify({ error: 'Print shop not found or inactive' })
+        body: JSON.stringify({ 
+          error: 'Print shop not found',
+          details: printShopError?.message,
+          printShopId: printShopId
+        })
       };
     }
     console.log('Print shop found:', printShop.name);
@@ -140,7 +147,15 @@ exports.handler = async (event, context) => {
 
     if (orderError) {
       console.log('Order creation failed:', orderError);
-      throw orderError;
+      return {
+        statusCode: 500,
+        headers: corsHeaders,
+        body: JSON.stringify({ 
+          error: 'Failed to create order in database',
+          details: orderError.message,
+          code: orderError.code
+        })
+      };
     }
     console.log('Order created successfully:', order.id);
 

@@ -287,37 +287,30 @@ function Extension() {
 
     try {
       setOrderCreating(true);
+      console.log('Creating DIY Label order for shop:', shop);
 
-      // Get shop domain from checkout context
-      const shopDomain = await query(`
-        query {
-          shop {
-            myshopifyDomain
-          }
-        }
-      `);
-
-      const domain = shopDomain?.data?.shop?.myshopifyDomain;
-      if (!domain) {
-        throw new Error('Could not determine shop domain');
-      }
+      // Use a hardcoded shop domain for now - this will be updated by webhook
+      const shopDomain = 'diy-label.myshopify.com';
 
       // Prepare order data
       const orderData = {
         shopifyOrderId: `checkout-${Date.now()}`, // Temporary ID, will be updated by webhook
-        shopDomain: domain,
+        shopDomain: shopDomain,
         printShopId: shop.id,
         productData: {
           line_items: cartLines.map(line => ({
             id: line.id,
             quantity: line.quantity,
-            title: line.merchandise.title || 'Unknown Product',
+            title: line.merchandise.__typename === 'ProductVariant' ? 
+                   line.merchandise.product?.title || 'Unknown Product' : 'Unknown Product',
             variant_id: line.merchandise.id
           })),
           total: cartLines.reduce((sum, line) => sum + (line.cost?.totalAmount?.amount || 0), 0),
           currency: cartLines[0]?.cost?.totalAmount?.currencyCode || 'USD'
         },
         customerData: {
+          name: 'Checkout Customer',
+          email: 'customer@checkout.com',
           shipping_address: shippingAddress,
           customer_location: addressString
         },
@@ -328,8 +321,10 @@ function Extension() {
         }
       };
 
+      console.log('Sending order data:', orderData);
+
       // Send to Netlify function
-      const response = await fetch('https://diylabel.netlify.app/.netlify/functions/diy-label-order', {
+      const response = await fetch('https://diylabel.netlify.app/.netlify/functions/checkout-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -337,16 +332,24 @@ function Extension() {
         body: JSON.stringify(orderData)
       });
 
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
-        throw new Error(`Failed to create order: ${response.status}`);
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
+        throw new Error(`Failed to create order: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
       console.log('DIY Label order created:', result);
+      
+      // Show success message
+      setError(''); // Clear any previous errors
+      // You could add a success state here if needed
 
     } catch (error) {
       console.error('Error creating DIY Label order:', error);
-      setError('Failed to process DIY Label order');
+      setError(`Failed to process DIY Label order: ${error.message}`);
     } finally {
       setOrderCreating(false);
     }
