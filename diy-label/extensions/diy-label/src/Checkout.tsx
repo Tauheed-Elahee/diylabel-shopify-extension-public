@@ -43,6 +43,14 @@ function Extension() {
   const attributes = useAttributes();
   const shippingAddress = useShippingAddress();
 
+  // Debug logging on component mount
+  useEffect(() => {
+    console.log('🌱 DIY Label Extension: Component mounted');
+    console.log('🌱 DIY Label Extension: Cart lines:', cartLines.length);
+    console.log('🌱 DIY Label Extension: Shipping address:', shippingAddress);
+    console.log('🌱 DIY Label Extension: Attributes:', attributes);
+  }, []);
+
   const [printShops, setPrintShops] = useState<PrintShop[]>([]);
   const [selectedPrintShop, setSelectedPrintShop] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -57,12 +65,26 @@ function Extension() {
   // Check if cart has items (function only works with products in cart)
   const hasCartItems = cartLines.length > 0;
 
+  // Debug logging for key states
+  useEffect(() => {
+    console.log('🌱 DIY Label Extension: State update', {
+      diyLabelEnabled,
+      existingPrintShop,
+      hasCartItems,
+      printShopsCount: printShops.length,
+      selectedPrintShop,
+      loading,
+      error
+    });
+  }, [diyLabelEnabled, existingPrintShop, hasCartItems, printShops.length, selectedPrintShop, loading, error]);
+
   // Create a stable address string for comparison
   const addressString = shippingAddress ? 
     `${shippingAddress.address1 || ''}, ${shippingAddress.city || ''}, ${shippingAddress.provinceCode || ''}, ${shippingAddress.countryCode || ''}, ${shippingAddress.zip || ''}`.trim() : '';
 
   // 2. Check instructions for feature availability
   if (!instructions.attributes.canUpdateAttributes) {
+    console.log('🌱 DIY Label Extension: Attribute changes not supported');
     return (
       <Banner title="DIY Label" status="warning">
         {translate("attributeChangesAreNotSupported")}
@@ -72,6 +94,7 @@ function Extension() {
 
   // Don't show if no cart items
   if (!hasCartItems) {
+    console.log('🌱 DIY Label Extension: No cart items, not showing');
     return null;
   }
 
@@ -160,8 +183,16 @@ function Extension() {
   // Watch for address changes and fetch print shops
   useEffect(() => {
     const loadPrintShopsForAddress = async () => {
+      console.log('🌱 DIY Label Extension: loadPrintShopsForAddress called', {
+        hasShippingAddress: !!shippingAddress,
+        hasCity: !!shippingAddress?.city,
+        diyLabelEnabled,
+        addressString
+      });
+
       if (!shippingAddress || !shippingAddress.city) {
         // Clear print shops if no valid address
+        console.log('🌱 DIY Label Extension: No valid address, clearing print shops');
         setPrintShops([]);
         setSelectedPrintShop("");
         return;
@@ -173,6 +204,7 @@ function Extension() {
       const coordinates = await geocodeAddress(shippingAddress);
       
       if (coordinates) {
+        console.log('🌱 DIY Label Extension: Got coordinates, fetching print shops');
         await fetchPrintShops(coordinates.lat, coordinates.lng);
       } else {
         // Fallback to a default location if geocoding fails
@@ -183,18 +215,24 @@ function Extension() {
 
     // Only load print shops if DIY Label is not already enabled
     if (!diyLabelEnabled) {
+      console.log('🌱 DIY Label Extension: DIY Label not enabled, loading print shops');
       loadPrintShopsForAddress();
+    } else {
+      console.log('🌱 DIY Label Extension: DIY Label already enabled, skipping print shop loading');
     }
   }, [addressString, diyLabelEnabled]); // Re-run when address string changes
 
   // Handle print shop selection
   const handlePrintShopChange = async (value: string) => {
+    console.log('🌱 DIY Label Extension: Print shop selection changed to:', value);
     setSelectedPrintShop(value);
     
     if (!value) return;
 
     const shop = printShops.find(s => s.id.toString() === value);
     if (!shop) return;
+
+    console.log('🌱 DIY Label Extension: Setting cart attributes for shop:', shop);
 
     try {
       // Update cart attributes with selected print shop
@@ -233,7 +271,10 @@ function Extension() {
         });
       }
 
+      console.log('🌱 DIY Label Extension: Cart attributes set successfully');
+
     } catch (error) {
+      console.error('🌱 DIY Label Extension: Error setting cart attributes:', error);
       setError('Failed to select print shop. Please try again.');
     }
   };
@@ -280,6 +321,12 @@ function Extension() {
 
   // Create order in Supabase when checkout is completed
   const createDIYLabelOrder = async () => {
+    console.log('🌱 DIY Label Extension: createDIYLabelOrder called', {
+      selectedPrintShop,
+      orderCreating,
+      printShopsLength: printShops.length
+    });
+
     if (!selectedPrintShop || orderCreating) {
       console.log('Cannot create order:', { selectedPrintShop: !!selectedPrintShop, orderCreating });
       return;
@@ -300,6 +347,7 @@ function Extension() {
       // Extract shop domain from current URL or use default
       const currentUrl = window.location?.hostname || 'diy-label.myshopify.com';
       const shopDomain = currentUrl.includes('.myshopify.com') ? currentUrl : 'diy-label.myshopify.com';
+      console.log('🌱 DIY Label Extension: Using shop domain:', shopDomain);
 
       // Prepare order data
       const orderData = {
