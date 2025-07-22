@@ -16,11 +16,6 @@ import { useState, useEffect } from "react";
 // Target: After shipping options (where it's most visible)
 export default reactExtension('purchase.checkout.shipping-option-list.render-after', () => <Extension />);
 
-export default reactExtension(
-  "purchase.checkout.pickup-location-list.render-before",
-  () => <Extension />
-);
-
 interface PrintShop {
   id: number;
   name: string;
