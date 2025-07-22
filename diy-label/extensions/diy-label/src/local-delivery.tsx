@@ -5,14 +5,13 @@ import {
   useAttributes,
   useCartLines,
   useShippingAddress,
-  useState,
-  useEffect,
   BlockStack,
   Text,
   Banner,
   Button,
   Select
 } from '@shopify/ui-extensions-react/checkout';
+import { useState, useEffect } from 'react';
 
 interface PrintShop {
   id: number;
