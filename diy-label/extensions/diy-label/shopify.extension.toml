@@ -14,11 +14,11 @@ type = "ui_extension"
 # and the file that contains your extension's source code.
 [[extensions.targeting]]
 module = "./src/local-delivery.tsx"
-target = "purchase.checkout.shipping-option-list.render-after"
+target = "purchase.checkout.delivery-address.render-after"
 
 [[extensions.targeting]]
 module = "./src/local-pick-up.tsx"
-target = "purchase.checkout.pickup-location-list.render-before"
+target = "purchase.checkout.shipping-option-list.render-after"
 
 [extensions.capabilities]
 # Gives your extension access to directly query Shopify's storefront API.

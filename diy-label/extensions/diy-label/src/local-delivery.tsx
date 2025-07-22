@@ -13,6 +13,9 @@ import {
 } from '@shopify/ui-extensions-react/checkout';
 import { useState, useEffect } from 'react';
 
+// Target: After delivery address is entered
+export default reactExtension('purchase.checkout.delivery-address.render-after', () => <Extension />);
+
 interface PrintShop {
   id: number;
   name: string;
@@ -376,8 +379,11 @@ function Extension() {
 
   // Only render if shipping address has been entered
   if (!shippingAddress || !shippingAddress.address1) {
+    console.log('🌱 DIY Label Extension: No shipping address, not rendering');
     return null;
   }
+
+  console.log('🌱 DIY Label Extension: Rendering with shipping address:', shippingAddress.city);
 
   // If already enabled, show current selection
   if (diyLabelEnabled && existingPrintShop) {
@@ -482,6 +488,4 @@ function Extension() {
     </BlockStack>
   );
 }
-
-export default reactExtension('purchase.checkout.delivery-address.render-after', () => <Extension />);
           
