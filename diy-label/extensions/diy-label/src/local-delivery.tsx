@@ -1,38 +1,24 @@
 import {
   reactExtension,
-          {selectedPrintShop && (
-            <BlockStack spacing="tight">
-              {(() => {
-                const shop = printShops.find(s => s.id.toString() === selectedPrintShop);
-                if (!shop) return null;
   useTranslate,
-                return (
-                  <>
-                    <Banner status="success">
-                      <BlockStack spacing="tight">
-                        <Text emphasis="bold">{shop.name} ⭐ {shop.rating}/5</Text>
-                        <Text>{shop.address}</Text>
-                        <Text>Specialty: {shop.specialty}</Text>
-                        {shop.distance_km && (
-                          <Text>Distance: {shop.distance_km.toFixed(1)} km</Text>
-                        )}
-                      </BlockStack>
-                    </Banner>
+  useApplyAttributeChange,
+  useAttributes,
+  useCartLines,
+  useShippingAddress,
+  useState,
+  useEffect,
+  BlockStack,
+  Text,
+  Banner,
+  Button,
+  Select
+} from '@shopify/ui-extensions-react/checkout';
 
-                    <Button
-                      kind="primary"
-                      onPress={createDIYLabelOrder}
-                      loading={orderCreating}
-                    >
-                      {orderCreating ? 'Creating Order...' : 'Confirm Local Printing'}
-                    </Button>
-                  </>
-                );
-              })()}
-            </BlockStack>
-          )}
-        </BlockStack>
-      )}
+interface PrintShop {
+  id: number;
+  name: string;
+  address: string;
+  specialty: string;
   rating: number;
   distance_km?: number;
 }
@@ -428,69 +414,75 @@ function Extension() {
         </BlockStack>
       </Banner>
 
-      {selectedOption && selectedOption?.title === 'Local Delivery' && (
-        <BlockStack spacing="base">
-          <Text emphasis="bold">{translate("selectPrintShop")}</Text>
-          
-          {geocoding && (
-            <Banner status="info">
-              <Text>📍 Finding print shops near your address...</Text>
-        <Banner status={error.includes('✅') ? "success" : "critical"}>
-          )}
-          
-          {error && (
-            <Banner status="critical">
-              <Text>{error}</Text>
-            </Banner>
-          )}
-          
-          {loading && !geocoding && (
-            <Text>Loading print shops...</Text>
-          )}
+      <BlockStack spacing="base">
+        <Text emphasis="bold">{translate("selectPrintShop")}</Text>
+        
+        {geocoding && (
+          <Banner status="info">
+            <Text>📍 Finding print shops near your address...</Text>
+          </Banner>
+        )}
+        
+        {error && (
+          <Banner status={error.includes('✅') ? "success" : "critical"}>
+            <Text>{error}</Text>
+          </Banner>
+        )}
+        
+        {loading && !geocoding && (
+          <Text>Loading print shops...</Text>
+        )}
 
-          {!loading && !geocoding && !error && printShops.length === 0 && shippingAddress.city && (
-            <Banner status="warning">
-              <Text>No print shops found near {shippingAddress.city}, {shippingAddress.provinceCode}. Please try a different address.</Text>
-            </Banner>
-          )}
+        {!loading && !geocoding && !error && printShops.length === 0 && shippingAddress.city && (
+          <Banner status="warning">
+            <Text>No print shops found near {shippingAddress.city}, {shippingAddress.provinceCode}. Please try a different address.</Text>
+          </Banner>
+        )}
 
-          {!loading && !geocoding && !error && printShops.length > 0 && (
-            <Select
-              label="Local Partner Shop"
-              value={selectedPrintShop}
-              onChange={handlePrintShopChange}
-              options={selectOptions}
-            />
-          )}
+        {!loading && !geocoding && !error && printShops.length > 0 && (
+          <Select
+            label="Local Partner Shop"
+            value={selectedPrintShop}
+            onChange={handlePrintShopChange}
+            options={selectOptions}
+          />
+        )}
 
-          {selectedPrintShop && (
-            <BlockStack spacing="tight">
-              {(() => {
-                const shop = printShops.find(s => s.id.toString() === selectedPrintShop);
-                if (!shop) return null;
+        {selectedPrintShop && (
+          <BlockStack spacing="tight">
+            {(() => {
+              const shop = printShops.find(s => s.id.toString() === selectedPrintShop);
+              if (!shop) return null;
 
-                return (
-                  <>
-                    <Banner status="success">
-                      <BlockStack spacing="tight">
-                        <Text emphasis="bold">{shop.name}</Text>
-                        <Text>{shop.address}</Text>
-                        <Text>Specialty: {shop.specialty}</Text>
-                        <Text>Rating: ⭐ {shop.rating}/5</Text>
-                        {shop.distance_km && (
-                          <Text>Distance: {shop.distance_km.toFixed(1)} km</Text>
-                        )}
-                      </BlockStack>
-                    </Banner>
-                  </>
-                );
-              })()}
-            </BlockStack>
-          )}
-        </BlockStack>
-      )}
+              return (
+                <>
+                  <Banner status="success">
+                    <BlockStack spacing="tight">
+                      <Text emphasis="bold">{shop.name} ⭐ {shop.rating}/5</Text>
+                      <Text>{shop.address}</Text>
+                      <Text>Specialty: {shop.specialty}</Text>
+                      {shop.distance_km && (
+                        <Text>Distance: {shop.distance_km.toFixed(1)} km</Text>
+                      )}
+                    </BlockStack>
+                  </Banner>
+
+                  <Button
+                    kind="primary"
+                    onPress={createDIYLabelOrder}
+                    loading={orderCreating}
+                  >
+                    {orderCreating ? 'Creating Order...' : 'Confirm Local Printing'}
+                  </Button>
+                </>
+              );
+            })()}
+          </BlockStack>
+        )}
+      </BlockStack>
     </BlockStack>
-      {!loading && !geocoding && printShops.length > 0 && (
-        <BlockStack spacing="base">
-          <Text emphasis="bold">{translate("selectPrintShop")}</Text>
+  );
+}
+
+export default reactExtension('purchase.checkout.delivery-address.render-after', () => <Extension />);
           
