@@ -393,11 +393,8 @@ function Extension() {
     return null;
   }
   
-  // Only show for pickup mode (not shipping/delivery mode)
-  if (deliveryMode === 'pickup') {
-    console.log('🌱 DIY Label Delivery Extension: Pickup mode detected, not rendering');
-    return null;
-  }
+  // Always show for delivery mode (this extension is for shipping/delivery)
+  console.log('🌱 DIY Label Delivery Extension: Rendering for delivery mode');
 
   console.log('🌱 DIY Label Delivery Extension: Rendering with shipping address:', shippingAddress.city);
 
