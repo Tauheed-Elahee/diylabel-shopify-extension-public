@@ -13,8 +13,8 @@ import {
 } from '@shopify/ui-extensions-react/checkout';
 import { useState, useEffect } from 'react';
 
-// Target: Before pickup location list - only show for pickup mode
-export default reactExtension('purchase.checkout.pickup-location-list.render-before', () => <Extension />);
+// Target: After shipping options - show for delivery/shipping mode
+export default reactExtension('purchase.checkout.shipping-option-list.render-after', () => <Extension />);
 
 interface PrintShop {
   id: number;
@@ -389,17 +389,17 @@ function Extension() {
 
   // Only render if shipping address has been entered
   if (!shippingAddress || !shippingAddress.address1) {
-    console.log('🌱 DIY Label Pickup Location Extension: No shipping address, not rendering');
+    console.log('🌱 DIY Label Delivery Extension: No shipping address, not rendering');
     return null;
   }
   
   // Only show for pickup mode (not shipping/delivery mode)
-  if (deliveryMode === 'ship') {
-    console.log('🌱 DIY Label Pickup Location Extension: Shipping mode detected, not rendering');
+  if (deliveryMode === 'pickup') {
+    console.log('🌱 DIY Label Delivery Extension: Pickup mode detected, not rendering');
     return null;
   }
 
-  console.log('🌱 DIY Label Pickup Location Extension: Rendering with shipping address:', shippingAddress.city);
+  console.log('🌱 DIY Label Delivery Extension: Rendering with shipping address:', shippingAddress.city);
 
   // If already enabled, show current selection
   if (diyLabelEnabled && existingPrintShop) {

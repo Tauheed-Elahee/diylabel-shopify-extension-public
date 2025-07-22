@@ -13,8 +13,8 @@ import {
 } from "@shopify/ui-extensions-react/checkout";
 import { useState, useEffect } from "react";
 
-// Target: After shipping options - only show for delivery/shipping mode
-export default reactExtension('purchase.checkout.shipping-option-list.render-after', () => <Extension />);
+// Target: Before pickup location list - show for pickup mode
+export default reactExtension('purchase.checkout.pickup-location-list.render-before', () => <Extension />);
 
 interface PrintShop {
   id: number;
@@ -405,8 +405,8 @@ function Extension() {
   }
   
   // Only show for shipping/delivery mode (not pickup mode)
-  if (deliveryMode === 'pickup') {
-    console.log('🌱 DIY Label Pickup Extension: Pickup mode detected, not rendering');
+  if (deliveryMode === 'ship') {
+    console.log('🌱 DIY Label Pickup Extension: Shipping mode detected, not rendering');
     return null;
   }
 
