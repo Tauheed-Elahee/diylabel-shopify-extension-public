@@ -13,7 +13,7 @@ import {
 } from "@shopify/ui-extensions-react/checkout";
 import { useState, useEffect } from "react";
 
-// Target: After shipping options (where it's most visible)
+// Target: After shipping options - only show for delivery/shipping mode
 export default reactExtension('purchase.checkout.shipping-option-list.render-after', () => <Extension />);
 
 interface PrintShop {
@@ -38,6 +38,7 @@ function Extension() {
   const [error, setError] = useState("");
   const [geocoding, setGeocoding] = useState(false);
   const [orderCreating, setOrderCreating] = useState(false);
+  const [deliveryMode, setDeliveryMode] = useState<string>('');
 
   // Get shipping address from Shopify
   const shippingAddress = useShippingAddress();
@@ -53,6 +54,15 @@ function Extension() {
     console.log('🌱 DIY Label Extension: Shipping address:', shippingAddress);
     console.log('🌱 DIY Label Extension: Attributes:', attributes);
     console.log('🌱 DIY Label Extension: DIY Label enabled:', diyLabelEnabled);
+    
+    // Try to detect delivery mode from URL or context
+    const url = window.location.href;
+    if (url.includes('delivery_method=ship') || url.includes('shipping')) {
+      setDeliveryMode('ship');
+    } else if (url.includes('delivery_method=pickup') || url.includes('pickup')) {
+      setDeliveryMode('pickup');
+    }
+    console.log('🌱 DIY Label Extension: Detected delivery mode:', deliveryMode);
   }, []);
 
   // Create a stable address string for comparison
@@ -391,6 +401,12 @@ function Extension() {
   // Only render if shipping address has been entered
   if (!shippingAddress || !shippingAddress.address1) {
     console.log('🌱 DIY Label Pickup Extension: No shipping address, not rendering');
+    return null;
+  }
+  
+  // Only show for shipping/delivery mode (not pickup mode)
+  if (deliveryMode === 'pickup') {
+    console.log('🌱 DIY Label Pickup Extension: Pickup mode detected, not rendering');
     return null;
   }
 
