@@ -23,3 +23,4 @@ target = "purchase.checkout.pickup-location-list.render-before"
 [extensions.capabilities]
 # Gives your extension access to directly query Shopify's storefront API.
 api_access = true
+network_access = true
