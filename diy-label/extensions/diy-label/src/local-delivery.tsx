@@ -289,9 +289,8 @@ function Extension() {
       setError('');
       console.log('🚢 Creating DIY Label order for shop:', shop);
 
-      // Extract shop domain from current URL or use default
-      const currentUrl = window.location?.hostname || 'diy-label.myshopify.com';
-      const shopDomain = currentUrl.includes('.myshopify.com') ? currentUrl : 'diy-label.myshopify.com';
+      // Use a default shop domain since window is not available in checkout extensions
+      const shopDomain = 'diy-label.myshopify.com';
       console.log('🚢 Using shop domain:', shopDomain);
 
       // Prepare order data
@@ -320,7 +319,7 @@ function Extension() {
           source: 'delivery_extension',
           extension_version: '1.0',
           print_shop_selection: shop,
-          user_agent: navigator.userAgent,
+          user_agent: 'checkout-extension',
           created_at: new Date().toISOString()
         }
       };
