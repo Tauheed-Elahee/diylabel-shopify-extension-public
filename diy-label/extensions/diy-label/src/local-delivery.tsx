@@ -4,10 +4,14 @@ import {
   BlockStack,
   Text,
   Select,
+  Button,
   useTranslate,
   useShippingAddress,
   useDeliveryGroups,
   useDeliveryGroup,
+  useCartLines,
+  useAttributes,
+  useApplyAttributeChange,
 } from "@shopify/ui-extensions-react/checkout";
 import { useState, useEffect } from "react";
 
@@ -34,15 +38,33 @@ function Extension() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [geocoding, setGeocoding] = useState(false);
+  const [orderCreating, setOrderCreating] = useState(false);
 
-  // Get shipping address from Shopify
+  // Get shipping address and cart data from Shopify
   const shippingAddress = useShippingAddress();
   const deliveryGroups = useDeliveryGroups();
   const selectedOption = useDeliveryGroup(deliveryGroups[0])?.selectedDeliveryOption;
+  const cartLines = useCartLines();
+  const attributes = useAttributes();
+  const applyAttributeChange = useApplyAttributeChange();
+
+  // Check if DIY Label is already enabled
+  const diyLabelEnabled = attributes.find(attr => attr.key === 'diy_label_enabled')?.value === 'true';
+  const existingPrintShop = attributes.find(attr => attr.key === 'diy_label_print_shop_name')?.value;
 
   // Create a stable address string for comparison
   const addressString = shippingAddress ? 
     `${shippingAddress.address1 || ''}, ${shippingAddress.city || ''}, ${shippingAddress.provinceCode || ''}, ${shippingAddress.countryCode || ''}, ${shippingAddress.zip || ''}`.trim() : '';
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🚢 Local Delivery Extension: Component mounted', {
+      cartLines: cartLines.length,
+      shippingAddress: !!shippingAddress,
+      diyLabelEnabled,
+      existingPrintShop
+    });
+  }, []);
 
   // Geocode address to get coordinates
   const geocodeAddress = async (address: any): Promise<{ lat: number; lng: number } | null> => {
@@ -61,7 +83,7 @@ function Extension() {
         address.zip
       ].filter(Boolean).join(', ');
 
-      console.log('Geocoding address:', addressQuery);
+      console.log('🚢 Geocoding address:', addressQuery);
 
       const response = await fetch(
         `https://diylabel.netlify.app/.netlify/functions/geocode?address=${encodeURIComponent(addressQuery)}`
@@ -74,13 +96,13 @@ function Extension() {
       const data = await response.json();
       
       if (data.lat && data.lng) {
-        console.log('Geocoded successfully:', { lat: data.lat, lng: data.lng });
+        console.log('🚢 Geocoded successfully:', { lat: data.lat, lng: data.lng });
         return { lat: data.lat, lng: data.lng };
       }
 
       return null;
     } catch (error) {
-      console.error('Geocoding error:', error);
+      console.error('🚢 Geocoding error:', error);
       return null;
     } finally {
       setGeocoding(false);
@@ -95,7 +117,7 @@ function Extension() {
       
       const apiUrl = `https://diylabel.netlify.app/.netlify/functions/nearby-shops?lat=${lat}&lng=${lng}&radius=50`;
       
-      console.log('Fetching print shops from:', apiUrl);
+      console.log('🚢 Fetching print shops from:', apiUrl);
       
       const response = await fetch(apiUrl);
       
@@ -110,7 +132,7 @@ function Extension() {
       setSelectedPrintShop("");
       
     } catch (err) {
-      console.error('Error fetching print shops:', err);
+      console.error('🚢 Error fetching print shops:', err);
       setError('Failed to load print shops. Please try again.');
       
       // Fallback to mock data for development
@@ -136,7 +158,7 @@ function Extension() {
         return;
       }
 
-      console.log('Address changed, fetching print shops for:', addressString);
+      console.log('🚢 Address changed, fetching print shops for:', addressString);
 
       // Try to geocode the address
       const coordinates = await geocodeAddress(shippingAddress);
@@ -145,13 +167,201 @@ function Extension() {
         await fetchPrintShops(coordinates.lat, coordinates.lng);
       } else {
         // Fallback to a default location if geocoding fails
-        console.log('Geocoding failed, using default Ottawa location');
+        console.log('🚢 Geocoding failed, using default Ottawa location');
         await fetchPrintShops(45.4215, -75.6972); // Ottawa coordinates
       }
     };
 
-    loadPrintShopsForAddress();
-  }, [addressString]); // Re-run when address string changes
+    // Only load print shops if DIY Label is not already enabled
+    if (!diyLabelEnabled) {
+      loadPrintShopsForAddress();
+    }
+  }, [addressString, diyLabelEnabled]);
+
+  // Update cart attributes when print shop selection changes
+  const handlePrintShopChange = async (value: string) => {
+    console.log('🚢 Print shop selection changed to:', value);
+    setSelectedPrintShop(value);
+    
+    try {
+      if (!value || value === "") {
+        // Clear DIY Label attributes when "Choose a print shop..." is selected
+        console.log('🚢 Clearing DIY Label attributes');
+        await applyAttributeChange({
+          key: "diy_label_enabled",
+          type: "updateAttribute",
+          value: "false",
+        });
+        await applyAttributeChange({
+          key: "diy_label_print_shop_id",
+          type: "updateAttribute",
+          value: "",
+        });
+        await applyAttributeChange({
+          key: "diy_label_print_shop_name",
+          type: "updateAttribute",
+          value: "",
+        });
+        await applyAttributeChange({
+          key: "diy_label_print_shop_address",
+          type: "updateAttribute",
+          value: "",
+        });
+        await applyAttributeChange({
+          key: "diy_label_customer_location",
+          type: "updateAttribute",
+          value: "",
+        });
+        return;
+      }
+
+      const shop = printShops.find(s => s.id.toString() === value);
+      if (!shop) return;
+
+      console.log('🚢 Setting cart attributes for shop:', shop);
+
+      // Update cart attributes with selected print shop
+      await applyAttributeChange({
+        key: "diy_label_enabled",
+        type: "updateAttribute",
+        value: "true",
+      });
+
+      await applyAttributeChange({
+        key: "diy_label_print_shop_id",
+        type: "updateAttribute",
+        value: shop.id.toString(),
+      });
+
+      await applyAttributeChange({
+        key: "diy_label_print_shop_name",
+        type: "updateAttribute",
+        value: shop.name,
+      });
+
+      await applyAttributeChange({
+        key: "diy_label_print_shop_address",
+        type: "updateAttribute",
+        value: shop.address,
+      });
+
+      if (shippingAddress) {
+        await applyAttributeChange({
+          key: "diy_label_customer_location",
+          type: "updateAttribute",
+          value: JSON.stringify({
+            address: addressString,
+            coordinates: { lat: shop.lat, lng: shop.lng }
+          }),
+        });
+      }
+
+      console.log('🚢 Cart attributes set successfully');
+
+    } catch (error) {
+      console.error('🚢 Error updating cart attributes:', error);
+      setError('Failed to update cart attributes. Please try again.');
+    }
+  };
+
+  // Create DIY Label order via Netlify endpoint
+  const createDIYLabelOrder = async () => {
+    console.log('🚢 createDIYLabelOrder called', {
+      selectedPrintShop,
+      orderCreating,
+      printShopsLength: printShops.length
+    });
+
+    if (!selectedPrintShop || orderCreating) {
+      console.log('🚢 Cannot create order:', { selectedPrintShop: !!selectedPrintShop, orderCreating });
+      return;
+    }
+
+    const shop = printShops.find(s => s.id.toString() === selectedPrintShop);
+    if (!shop) {
+      console.error('🚢 Selected print shop not found:', selectedPrintShop);
+      setError('Selected print shop not found');
+      return;
+    }
+
+    try {
+      setOrderCreating(true);
+      setError('');
+      console.log('🚢 Creating DIY Label order for shop:', shop);
+
+      // Extract shop domain from current URL or use default
+      const currentUrl = window.location?.hostname || 'diy-label.myshopify.com';
+      const shopDomain = currentUrl.includes('.myshopify.com') ? currentUrl : 'diy-label.myshopify.com';
+      console.log('🚢 Using shop domain:', shopDomain);
+
+      // Prepare order data
+      const orderData = {
+        shopifyOrderId: `delivery-checkout-${Date.now()}`,
+        shopDomain: shopDomain,
+        printShopId: shop.id,
+        productData: {
+          line_items: cartLines.map(line => ({
+            id: line.id,
+            quantity: line.quantity,
+            title: line.merchandise.__typename === 'ProductVariant' ? 
+                   line.merchandise.product?.title || 'Unknown Product' : 'Unknown Product',
+            variant_id: line.merchandise.id
+          })),
+          total: cartLines.reduce((sum, line) => sum + (line.cost?.totalAmount?.amount || 0), 0),
+          currency: cartLines[0]?.cost?.totalAmount?.currencyCode || 'USD'
+        },
+        customerData: {
+          name: 'Delivery Extension Customer',
+          email: 'delivery-extension@example.com',
+          shipping_address: shippingAddress,
+          customer_location: addressString
+        },
+        options: {
+          source: 'delivery_extension',
+          extension_version: '1.0',
+          print_shop_selection: shop,
+          user_agent: navigator.userAgent,
+          created_at: new Date().toISOString()
+        }
+      };
+
+      console.log('🚢 Sending order data:', orderData);
+
+      const response = await fetch('https://diylabel.netlify.app/.netlify/functions/checkout-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(orderData)
+      });
+      
+      console.log('🚢 Response:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('🚢 API error:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log('🚢 DIY Label order created successfully:', result);
+      
+      if (result.success) {
+        setError('✅ Order created successfully!');
+        console.log('🚢 Success: Order created successfully!');
+      } else {
+        throw new Error(result.error || 'Order creation failed');
+      }
+
+    } catch (error) {
+      console.error('🚢 Error creating DIY Label order:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setError(`Failed to create order: ${errorMessage}`);
+    } finally {
+      setOrderCreating(false);
+    }
+  };
 
   // Prepare select options
   const selectOptions = [
@@ -161,10 +371,6 @@ function Extension() {
       label: `${shop.name}${shop.distance_km ? ` (${shop.distance_km.toFixed(1)}km)` : ''}`
     }))
   ];
-
-  const handlePrintShopChange = (value: string) => {
-    setSelectedPrintShop(value);
-  };
 
   // Only render if shipping address has been entered
   if (!shippingAddress || !shippingAddress.address1) {
@@ -182,67 +388,73 @@ function Extension() {
         </BlockStack>
       </Banner>
 
-      {selectedOption && selectedOption?.title === 'Local Delivery' && (
-        <BlockStack spacing="base">
-          <Text emphasis="bold">{translate("selectPrintShop")}</Text>
-          
-          {geocoding && (
-            <Banner status="info">
-              <Text>📍 Finding print shops near your address...</Text>
-            </Banner>
-          )}
-          
-          {error && (
-            <Banner status="critical">
-              <Text>{error}</Text>
-            </Banner>
-          )}
-          
-          {loading && !geocoding && (
-            <Text>Loading print shops...</Text>
-          )}
+      <BlockStack spacing="base">
+        <Text emphasis="bold">{translate("selectPrintShop")}</Text>
+        
+        {geocoding && (
+          <Banner status="info">
+            <Text>📍 Finding print shops near your address...</Text>
+          </Banner>
+        )}
+        
+        {error && (
+          <Banner status={error.includes('✅') ? "success" : "critical"}>
+            <Text>{error}</Text>
+          </Banner>
+        )}
+        
+        {loading && !geocoding && (
+          <Text>Loading print shops...</Text>
+        )}
 
-          {!loading && !geocoding && !error && printShops.length === 0 && shippingAddress.city && (
-            <Banner status="warning">
-              <Text>No print shops found near {shippingAddress.city}, {shippingAddress.provinceCode}. Please try a different address.</Text>
-            </Banner>
-          )}
+        {!loading && !geocoding && !error && printShops.length === 0 && shippingAddress.city && (
+          <Banner status="warning">
+            <Text>No print shops found near {shippingAddress.city}, {shippingAddress.provinceCode}. Please try a different address.</Text>
+          </Banner>
+        )}
 
-          {!loading && !geocoding && !error && printShops.length > 0 && (
-            <Select
-              label="Local Partner Shop"
-              value={selectedPrintShop}
-              onChange={handlePrintShopChange}
-              options={selectOptions}
-            />
-          )}
+        {!loading && !geocoding && printShops.length > 0 && (
+          <Select
+            label="Local Partner Shop"
+            value={selectedPrintShop}
+            onChange={handlePrintShopChange}
+            options={selectOptions}
+          />
+        )}
 
-          {selectedPrintShop && (
-            <BlockStack spacing="tight">
-              {(() => {
-                const shop = printShops.find(s => s.id.toString() === selectedPrintShop);
-                if (!shop) return null;
+        {selectedPrintShop && (
+          <BlockStack spacing="tight">
+            {(() => {
+              const shop = printShops.find(s => s.id.toString() === selectedPrintShop);
+              if (!shop) return null;
+              
+              return (
+                <>
+                  <Banner status="success">
+                    <BlockStack spacing="tight">
+                      <Text emphasis="bold">{shop.name}</Text>
+                      <Text>{shop.address}</Text>
+                      <Text>Specialty: {shop.specialty}</Text>
+                      <Text>Rating: ⭐ {shop.rating}/5</Text>
+                      {shop.distance_km && (
+                        <Text>Distance: {shop.distance_km.toFixed(1)} km</Text>
+                      )}
+                    </BlockStack>
+                  </Banner>
 
-                return (
-                  <>
-                    <Banner status="success">
-                      <BlockStack spacing="tight">
-                        <Text emphasis="bold">{shop.name}</Text>
-                        <Text>{shop.address}</Text>
-                        <Text>Specialty: {shop.specialty}</Text>
-                        <Text>Rating: ⭐ {shop.rating}/5</Text>
-                        {shop.distance_km && (
-                          <Text>Distance: {shop.distance_km.toFixed(1)} km</Text>
-                        )}
-                      </BlockStack>
-                    </Banner>
-                  </>
-                );
-              })()}
-            </BlockStack>
-          )}
-        </BlockStack>
-      )}
+                  <Button
+                    kind="primary"
+                    onPress={createDIYLabelOrder}
+                    loading={orderCreating}
+                  >
+                    {orderCreating ? 'Creating Order...' : 'Create DIY Label Order'}
+                  </Button>
+                </>
+              );
+            })()}
+          </BlockStack>
+        )}
+      </BlockStack>
     </BlockStack>
   );
 }
