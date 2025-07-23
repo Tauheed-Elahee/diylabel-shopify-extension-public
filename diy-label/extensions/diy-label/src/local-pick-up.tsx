@@ -13,8 +13,7 @@ import {
   useCartLines,
   useAttributes,
   useApplyAttributeChange,
-  useEmail,
-  usePhone,
+  useCustomer,
 } from "@shopify/ui-extensions-react/checkout";
 import { useState, useEffect } from "react";
 
@@ -48,8 +47,7 @@ function Extension() {
   const cartLines = useCartLines();
   const attributes = useAttributes();
   const applyAttributeChange = useApplyAttributeChange();
-  const email = useEmail();
-  const phone = usePhone();
+  const customer = useCustomer();
 
   // Check if DIY Label is already enabled
   const diyLabelEnabled = attributes.find(attr => attr.key === 'diy_label_enabled')?.value === 'true';
@@ -301,10 +299,10 @@ function Extension() {
     // Validate customer information before creating order
     const missingInfo = [];
     
-    // Check customer contact info
-    if (!email || email.trim().length === 0) {
+    // Check customer contact info from useCustomer hook
+    if (!customer?.email || customer.email.trim().length === 0) {
       missingInfo.push('Email address');
-    } else if (!email.includes('@')) {
+    } else if (!customer.email.includes('@')) {
       missingInfo.push('Valid email address');
     }
     
@@ -328,8 +326,12 @@ function Extension() {
       .join(' ')
       .trim();
     
-    if (!customerName || customerName.length < 2) {
-      missingInfo.push('Customer name');
+    // Try customer name from customer object if shipping address doesn't have it
+    const fullCustomerName = customerName || 
+      [customer?.firstName, customer?.lastName].filter(Boolean).join(' ').trim();
+    
+    if (!fullCustomerName || fullCustomerName.length < 2) {
+      missingInfo.push('Customer name (first and last name)');
     }
     
     if (missingInfo.length > 0) {
@@ -349,7 +351,9 @@ function Extension() {
       console.log('📦 Using shop domain:', shopDomain);
 
       // Extract customer name from shipping address
-      const fullName = customerName;
+      const fullName = customerName || 
+        [customer?.firstName, customer?.lastName].filter(Boolean).join(' ').trim() ||
+        'Pickup Extension Customer';
       
       // Prepare order data
       const orderData = {
@@ -375,11 +379,11 @@ function Extension() {
         },
         customerData: {
           name: fullName,
-          email: email || '',
-          phone: phone || '',
+          email: customer?.email || '',
+          phone: customer?.phone || '',
           shipping_address: shippingAddress,
           customer_location: addressString,
-          customer_id: null
+          customer_id: customer?.id || null
         },
         options: {
           source: 'pickup_extension',
@@ -390,8 +394,9 @@ function Extension() {
           shipping_address: shippingAddress,
           customer_info: {
             name: fullName,
-            email: email,
-            phone: phone
+            email: customer?.email,
+            phone: customer?.phone,
+            customer_id: customer?.id
           }
         }
       };
