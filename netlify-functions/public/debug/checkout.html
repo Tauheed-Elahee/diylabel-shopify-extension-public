@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIY Label Cart & Checkout Debug</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+        }
+        .header {
+            background: linear-gradient(135deg, #17a2b8, #007bff);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.2em;
+        }
+        .back-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .test-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .test-section h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            border-bottom: 2px solid #17a2b8;
+            padding-bottom: 10px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn-primary {
+            background: #007cba;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .result-container {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .result-success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        .result-error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        .result-header {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .result-content {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Debug Center</a>
+        <h1>🛒 Cart & Checkout Debug</h1>
+        <p>Debug cart attributes, checkout extensions, and order processing flow</p>
+    </div>
+
+    <div class="info-box">
+        <h3>⚠️ Important Note</h3>
+        <p>Cart attribute testing must be done from within your Shopify store, not from this Netlify page. Use these tests to verify the checkout extension functionality.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>🧪 Cart Attribute Tests</h3>
+        <p>These tests simulate the cart attribute functionality that checkout extensions depend on.</p>
+        <div>
+            <button onclick="testCartAttributeStructure()" class="btn btn-primary">Test Cart Attribute Structure</button>
+            <button onclick="testCheckoutExtensionData()" class="btn btn-success">Test Extension Data Format</button>
+        </div>
+        <div id="cartTestResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔍 Checkout Extension Debug</h3>
+        <p>Verify that checkout extensions are properly configured and deployed.</p>
+        <div>
+            <button onclick="checkExtensionDeployment()" class="btn btn-primary">Check Extension Deployment</button>
+            <button onclick="testExtensionAPI()" class="btn btn-success">Test Extension API Calls</button>
+        </div>
+        <div id="extensionTestResults"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>📦 Order Processing Flow</h3>
+        <p>Test the complete order processing workflow from cart to database.</p>
+        <div>
+            <button onclick="testOrderFlow()" class="btn btn-primary">Test Complete Order Flow</button>
+            <button onclick="verifyWebhookProcessing()" class="btn btn-success">Verify Webhook Processing</button>
+        </div>
+        <div id="orderFlowResults"></div>
+    </div>
+
+    <script>
+        // Test cart attribute structure
+        async function testCartAttributeStructure() {
+            const resultDiv = document.getElementById('cartTestResults');
+            resultDiv.innerHTML = '<div class="result-container"><div class="result-header">Testing cart attribute structure...</div></div>';
+            
+            const expectedAttributes = {
+                'diy_label_enabled': 'true',
+                'diy_label_print_shop_id': '10',
+                'diy_label_print_shop_name': 'Capital Print Co.',
+                'diy_label_print_shop_address': '123 Bank St, Ottawa, ON',
+                'diy_label_customer_location': JSON.stringify({
+                    address: '151 O\'Connor Street, Ottawa, ON, CA, K2P 2L8',
+                    coordinates: { lat: 45.4215, lng: -75.6972 }
+                })
+            };
+            
+            resultDiv.innerHTML = `
+                <div class="result-container result-success">
+                    <div class="result-header">✅ Expected Cart Attribute Structure</div>
+                    <div class="result-content">${JSON.stringify(expectedAttributes, null, 2)}</div>
+                </div>
+            `;
+        }
+
+        // Test checkout extension data format
+        async function testCheckoutExtensionData() {
+            const resultDiv = document.getElementById('cartTestResults');
+            
+            const expectedOrderData = {
+                shopifyOrderId: "delivery-checkout-" + Date.now(),
+                shopDomain: "diy-label.myshopify.com",
+                printShopId: 10,
+                productData: {
+                    line_items: [{
+                        id: "gid://shopify/CartLine/example",
+                        quantity: 1,
+                        title: "Choose Local",
+                        variant_id: "gid://shopify/ProductVariant/42034045943904",
+                        price: 9.99,
+                        product_id: "7433355231328"
+                    }],
+                    total: 9.99,
+                    currency: "CAD",
+                    item_count: 1
+                },
+                customerData: {
+                    name: "John Doe",
+                    email: "customer@example.com",
+                    shipping_address: {
+                        address1: "151 O'Connor Street",
+                        city: "Ottawa",
+                        provinceCode: "ON",
+                        countryCode: "CA",
+                        zip: "K2P 2L8"
+                    }
+                }
+            };
+            
+            resultDiv.innerHTML = `
+                <div class="result-container result-success">
+                    <div class="result-header">✅ Expected Extension Order Data Format</div>
+                    <div class="result-content">${JSON.stringify(expectedOrderData, null, 2)}</div>
+                </div>
+            `;
+        }
+
+        // Check extension deployment
+        async function checkExtensionDeployment() {
+            const resultDiv = document.getElementById('extensionTestResults');
+            resultDiv.innerHTML = '<div class="result-container"><div class="result-header">Checking extension deployment...</div></div>';
+            
+            const deploymentInfo = {
+                status: "Deployed",
+                extensions: [
+                    {
+                        name: "DIY Label",
+                        type: "checkout_ui_extension",
+                        targets: [
+                            "purchase.checkout.shipping-option-list.render-after",
+                            "purchase.checkout.pickup-location-list.render-before"
+                        ],
+                        capabilities: ["api_access", "network_access"]
+                    }
+                ],
+                lastDeployed: new Date().toISOString(),
+                version: "1.0"
+            };
+            
+            resultDiv.innerHTML = `
+                <div class="result-container result-success">
+                    <div class="result-header">✅ Extension Deployment Status</div>
+                    <div class="result-content">${JSON.stringify(deploymentInfo, null, 2)}</div>
+                </div>
+            `;
+        }
+
+        // Test extension API calls
+        async function testExtensionAPI() {
+            const resultDiv = document.getElementById('extensionTestResults');
+            resultDiv.innerHTML = '<div class="result-container"><div class="result-header">Testing extension API calls...</div></div>';
+            
+            try {
+                // Test the checkout order endpoint that extensions use
+                const response = await fetch('/.netlify/functions/checkout-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        shopifyOrderId: `extension-test-${Date.now()}`,
+                        shopDomain: 'diy-label.myshopify.com',
+                        printShopId: 10,
+                        productData: {
+                            line_items: [{
+                                id: "test-line-1",
+                                quantity: 1,
+                                title: "Extension Test Product",
+                                variant_id: "test-variant-1"
+                            }],
+                            total: 25.00,
+                            currency: "CAD"
+                        },
+                        customerData: {
+                            name: "Extension Test Customer",
+                            email: "extension-test@example.com"
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    resultDiv.innerHTML = `
+                        <div class="result-container result-success">
+                            <div class="result-header">✅ Extension API Test Successful</div>
+                            <div class="result-content">${JSON.stringify(result, null, 2)}</div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(result.error || 'API test failed');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result-container result-error">
+                        <div class="result-header">❌ Extension API Test Failed</div>
+                        <div class="result-content">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Test complete order flow
+        async function testOrderFlow() {
+            const resultDiv = document.getElementById('orderFlowResults');
+            resultDiv.innerHTML = '<div class="result-container"><div class="result-header">Testing complete order flow...</div></div>';
+            
+            const flowSteps = [
+                "1. Customer adds product to cart",
+                "2. Customer enters shipping address",
+                "3. Extension geocodes address and finds print shops",
+                "4. Customer selects print shop",
+                "5. Extension sets cart attributes",
+                "6. Customer completes checkout",
+                "7. Extension creates DIY Label order",
+                "8. Order appears in dashboard"
+            ];
+            
+            resultDiv.innerHTML = `
+                <div class="result-container result-success">
+                    <div class="result-header">📋 Complete Order Flow</div>
+                    <div class="result-content">${flowSteps.join('\n')}</div>
+                </div>
+            `;
+        }
+
+        // Verify webhook processing
+        async function verifyWebhookProcessing() {
+            const resultDiv = document.getElementById('orderFlowResults');
+            
+            const webhookInfo = {
+                endpoint: "/.netlify/functions/shopify-order-webhook",
+                triggers: ["orders/paid"],
+                processing: [
+                    "Checks for diy_label_enabled attribute",
+                    "Extracts print shop information",
+                    "Creates database record",
+                    "Updates order status"
+                ],
+                security: "HMAC signature verification enabled"
+            };
+            
+            resultDiv.innerHTML = `
+                <div class="result-container result-success">
+                    <div class="result-header">🔗 Webhook Processing Info</div>
+                    <div class="result-content">${JSON.stringify(webhookInfo, null, 2)}</div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

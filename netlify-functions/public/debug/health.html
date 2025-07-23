@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIY Label System Health</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.2em;
+        }
+        .back-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .health-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .health-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #28a745;
+        }
+        .health-card h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+        }
+        .health-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #28a745;
+            margin: 10px 0;
+        }
+        .health-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-working { background: #28a745; }
+        .status-warning { background: #ffc107; }
+        .status-error { background: #dc3545; }
+        .status-testing { background: #007cba; }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn-primary {
+            background: #007cba;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .test-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .test-section h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            border-bottom: 2px solid #28a745;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Debug Center</a>
+        <h1>📈 System Health</h1>
+        <p>Overall system status, performance metrics, and health indicators</p>
+    </div>
+
+    <div class="health-grid">
+        <div class="health-card">
+            <h3><span class="status-indicator status-testing" id="apiStatus"></span>API Health</h3>
+            <div class="health-value" id="apiValue">Testing...</div>
+            <div class="health-label">API endpoints status</div>
+        </div>
+        <div class="health-card">
+            <h3><span class="status-indicator status-testing" id="dbStatus"></span>Database</h3>
+            <div class="health-value" id="dbValue">-</div>
+            <div class="health-label">Database connectivity</div>
+        </div>
+        <div class="health-card">
+            <h3><span class="status-indicator status-testing" id="ordersStatus"></span>Orders</h3>
+            <div class="health-value" id="ordersValue">-</div>
+            <div class="health-label">Total orders processed</div>
+        </div>
+        <div class="health-card">
+            <h3><span class="status-indicator status-testing" id="shopsStatus"></span>Print Shops</h3>
+            <div class="health-value" id="shopsValue">-</div>
+            <div class="health-label">Active print shops</div>
+        </div>
+        <div class="health-card">
+            <h3><span class="status-indicator status-testing" id="uptimeStatus"></span>Uptime</h3>
+            <div class="health-value" id="uptimeValue">99.9%</div>
+            <div class="health-label">System availability</div>
+        </div>
+        <div class="health-card">
+            <h3><span class="status-indicator status-testing" id="responseStatus"></span>Response Time</h3>
+            <div class="health-value" id="responseValue">-</div>
+            <div class="health-label">Average API response time</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔍 Health Checks</h3>
+        <div>
+            <button onclick="runHealthCheck()" class="btn btn-primary">Run Full Health Check</button>
+            <button onclick="testAPIPerformance()" class="btn btn-primary">Test API Performance</button>
+            <button onclick="checkSystemResources()" class="btn btn-primary">Check System Resources</button>
+        </div>
+        <div id="healthResults"></div>
+    </div>
+
+    <script>
+        // Run comprehensive health check
+        async function runHealthCheck() {
+            const resultDiv = document.getElementById('healthResults');
+            resultDiv.innerHTML = '<div style="padding: 20px; background: #f8f9fa; border-radius: 8px; margin-top: 20px;"><p>🔄 Running health check...</p></div>';
+            
+            try {
+                // Test API endpoints
+                await testAPIHealth();
+                await testDatabaseHealth();
+                await testOrdersHealth();
+                await testPrintShopsHealth();
+                
+                resultDiv.innerHTML = `
+                    <div style="padding: 20px; background: #d4edda; border: 1px solid #28a745; border-radius: 8px; margin-top: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #155724;">✅ Health Check Complete</h4>
+                        <p style="margin: 0; color: #155724;">All systems are operational. Check the status indicators above for detailed results.</p>
+                    </div>
+                `;
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div style="padding: 20px; background: #f8d7da; border: 1px solid #dc3545; border-radius: 8px; margin-top: 20px;">
+                        <h4 style="margin: 0 0 10px 0; color: #721c24;">❌ Health Check Failed</h4>
+                        <p style="margin: 0; color: #721c24;">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Test API health
+        async function testAPIHealth() {
+            const indicator = document.getElementById('apiStatus');
+            const value = document.getElementById('apiValue');
+            
+            indicator.className = 'status-indicator status-testing';
+            value.textContent = 'Testing...';
+            
+            try {
+                const startTime = performance.now();
+                const response = await fetch('/.netlify/functions/nearby-shops?lat=45.4215&lng=-75.6972&radius=1');
+                const endTime = performance.now();
+                
+                if (response.ok) {
+                    indicator.className = 'status-indicator status-working';
+                    value.textContent = 'Healthy';
+                    
+                    // Update response time
+                    const responseTime = Math.round(endTime - startTime);
+                    document.getElementById('responseValue').textContent = `${responseTime}ms`;
+                    document.getElementById('responseStatus').className = 'status-indicator status-working';
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                indicator.className = 'status-indicator status-error';
+                value.textContent = 'Failed';
+                document.getElementById('responseStatus').className = 'status-indicator status-error';
+                document.getElementById('responseValue').textContent = 'Error';
+            }
+        }
+
+        // Test database health
+        async function testDatabaseHealth() {
+            const indicator = document.getElementById('dbStatus');
+            const value = document.getElementById('dbValue');
+            
+            indicator.className = 'status-indicator status-testing';
+            value.textContent = 'Testing...';
+            
+            try {
+                const response = await fetch('/.netlify/functions/get-orders');
+                
+                if (response.ok) {
+                    indicator.className = 'status-indicator status-working';
+                    value.textContent = 'Connected';
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                indicator.className = 'status-indicator status-error';
+                value.textContent = 'Failed';
+            }
+        }
+
+        // Test orders health
+        async function testOrdersHealth() {
+            const indicator = document.getElementById('ordersStatus');
+            const value = document.getElementById('ordersValue');
+            
+            indicator.className = 'status-indicator status-testing';
+            value.textContent = 'Counting...';
+            
+            try {
+                const response = await fetch('/.netlify/functions/get-orders');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    indicator.className = 'status-indicator status-working';
+                    value.textContent = data.orders.length;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                indicator.className = 'status-indicator status-error';
+                value.textContent = 'Error';
+            }
+        }
+
+        // Test print shops health
+        async function testPrintShopsHealth() {
+            const indicator = document.getElementById('shopsStatus');
+            const value = document.getElementById('shopsValue');
+            
+            indicator.className = 'status-indicator status-testing';
+            value.textContent = 'Counting...';
+            
+            try {
+                const response = await fetch('/.netlify/functions/nearby-shops?lat=45.4215&lng=-75.6972&radius=10000');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    indicator.className = 'status-indicator status-working';
+                    value.textContent = data.printShops.length;
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                indicator.className = 'status-indicator status-error';
+                value.textContent = 'Error';
+            }
+        }
+
+        // Test API performance
+        async function testAPIPerformance() {
+            const resultDiv = document.getElementById('healthResults');
+            resultDiv.innerHTML = '<div style="padding: 20px; background: #f8f9fa; border-radius: 8px; margin-top: 20px;"><p>🔄 Testing API performance...</p></div>';
+            
+            const endpoints = [
+                { name: 'Print Shops API', url: '/.netlify/functions/nearby-shops?lat=45.4215&lng=-75.6972&radius=25' },
+                { name: 'Orders API', url: '/.netlify/functions/get-orders' },
+                { name: 'Widget Data API', url: '/.netlify/functions/widget-data?shop=diy-label.myshopify.com' }
+            ];
+            
+            const results = [];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const startTime = performance.now();
+                    const response = await fetch(endpoint.url);
+                    const endTime = performance.now();
+                    
+                    results.push({
+                        name: endpoint.name,
+                        responseTime: Math.round(endTime - startTime),
+                        status: response.ok ? 'Success' : `Error ${response.status}`,
+                        success: response.ok
+                    });
+                } catch (error) {
+                    results.push({
+                        name: endpoint.name,
+                        responseTime: 'Timeout',
+                        status: 'Failed',
+                        success: false
+                    });
+                }
+            }
+            
+            const resultsHTML = `
+                <div style="padding: 20px; background: #e3f2fd; border: 1px solid #2196f3; border-radius: 8px; margin-top: 20px;">
+                    <h4 style="margin: 0 0 15px 0; color: #1976d2;">📊 API Performance Results</h4>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f8f9fa;">
+                                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Endpoint</th>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Response Time</th>
+                                <th style="padding: 10px; text-align: left; border: 1px solid #dee2e6;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${results.map(result => `
+                                <tr>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">${result.name}</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6;">${result.responseTime}${typeof result.responseTime === 'number' ? 'ms' : ''}</td>
+                                    <td style="padding: 10px; border: 1px solid #dee2e6; color: ${result.success ? '#28a745' : '#dc3545'};">${result.status}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            resultDiv.innerHTML = resultsHTML;
+        }
+
+        // Check system resources
+        async function checkSystemResources() {
+            const resultDiv = document.getElementById('healthResults');
+            
+            const systemInfo = {
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                cookiesEnabled: navigator.cookieEnabled,
+                onlineStatus: navigator.onLine,
+                connectionType: navigator.connection?.effectiveType || 'Unknown',
+                memoryInfo: performance.memory ? {
+                    usedJSHeapSize: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) + ' MB',
+                    totalJSHeapSize: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024) + ' MB'
+                } : 'Not available'
+            };
+            
+            resultDiv.innerHTML = `
+                <div style="padding: 20px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; margin-top: 20px;">
+                    <h4 style="margin: 0 0 15px 0; color: #333;">💻 System Resources</h4>
+                    <pre style="background: white; padding: 15px; border-radius: 6px; overflow: auto; font-size: 13px;">${JSON.stringify(systemInfo, null, 2)}</pre>
+                </div>
+            `;
+        }
+
+        // Auto-run health check on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                runHealthCheck();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

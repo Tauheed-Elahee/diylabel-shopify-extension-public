@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIY Label Store Management Debug</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+        }
+        .header {
+            background: linear-gradient(135deg, #ff9800, #f57c00);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.2em;
+        }
+        .back-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .stores-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .stores-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .stores-header h3 {
+            margin: 0;
+            color: #333;
+        }
+        .stores-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .stores-table th,
+        .stores-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .stores-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        .stores-table tr:hover {
+            background: #f8f9fa;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        .empty-state h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s ease;
+            margin-right: 10px;
+        }
+        .btn-primary {
+            background: #007cba;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Debug Center</a>
+        <h1>🏪 Store Management Debug</h1>
+        <p>View connected stores, authentication status, and store-specific settings</p>
+    </div>
+
+    <div class="controls">
+        <h3>🔧 Controls</h3>
+        <button onclick="loadStores()" class="btn btn-primary">🔄 Refresh Stores</button>
+        <button onclick="testStoreConnection()" class="btn btn-primary">🧪 Test Store Connection</button>
+    </div>
+
+    <div class="stores-container">
+        <div class="stores-header">
+            <h3>Connected Shopify Stores</h3>
+        </div>
+        <div id="storesContent">
+            <div class="loading">
+                <p>🔄 Loading stores...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allStores = [];
+
+        // Load stores from the database
+        async function loadStores() {
+            try {
+                document.getElementById('storesContent').innerHTML = '<div class="loading"><p>🔄 Loading stores...</p></div>';
+                
+                // We'll need to create a function to get store data
+                // For now, we'll simulate with the orders endpoint and extract store info
+                const response = await fetch('/.netlify/functions/get-orders');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Extract unique stores from orders
+                const storeMap = new Map();
+                data.orders.forEach(order => {
+                    if (order.shopify_store_id) {
+                        storeMap.set(order.shopify_store_id, {
+                            id: order.shopify_store_id,
+                            shop_domain: 'diy-label.myshopify.com', // We know this from the orders
+                            orderCount: (storeMap.get(order.shopify_store_id)?.orderCount || 0) + 1,
+                            lastOrder: order.created_at,
+                            active: true
+                        });
+                    }
+                });
+                
+                allStores = Array.from(storeMap.values());
+                updateStoresDisplay();
+                
+            } catch (error) {
+                console.error('Error loading stores:', error);
+                document.getElementById('storesContent').innerHTML = `
+                    <div class="error">
+                        <strong>Error loading stores:</strong> ${error.message}
+                        <br><br>
+                        <button onclick="loadStores()" class="btn btn-primary">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Update the stores display
+        function updateStoresDisplay() {
+            const container = document.getElementById('storesContent');
+            
+            if (allStores.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h4>No stores found</h4>
+                        <p>No connected Shopify stores found in the database.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const tableHTML = `
+                <table class="stores-table">
+                    <thead>
+                        <tr>
+                            <th>Store Domain</th>
+                            <th>Store ID</th>
+                            <th>Orders</th>
+                            <th>Last Order</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${allStores.map(store => `
+                            <tr>
+                                <td><strong>${store.shop_domain}</strong></td>
+                                <td><code>${store.id}</code></td>
+                                <td>${store.orderCount}</td>
+                                <td>${formatDate(store.lastOrder)}</td>
+                                <td><span class="status-badge status-${store.active ? 'active' : 'inactive'}">${store.active ? 'Active' : 'Inactive'}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Test store connection
+        async function testStoreConnection() {
+            try {
+                // Test by trying to fetch orders
+                const response = await fetch('/.netlify/functions/get-orders');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(`✅ Store connection test successful!\n\nFound ${data.orders.length} orders from connected stores.`);
+                } else {
+                    alert(`❌ Store connection test failed:\n${data.error}`);
+                }
+            } catch (error) {
+                alert(`❌ Store connection test failed:\n${error.message}`);
+            }
+        }
+
+        // Load stores on page load
+        loadStores();
+    </script>
+</body>
+</html>

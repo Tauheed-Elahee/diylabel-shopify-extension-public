@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIY Label Print Shops Network Debug</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+        }
+        .header {
+            background: linear-gradient(135deg, #20c997, #28a745);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.2em;
+        }
+        .back-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .controls h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+        }
+        .control-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+        .btn-primary {
+            background: #007cba;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .input-group label {
+            font-weight: 600;
+            color: #495057;
+        }
+        .input-group input {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .shops-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .shops-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .shops-header h3 {
+            margin: 0;
+            color: #333;
+        }
+        .shops-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .shop-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .shop-card h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .shop-card p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        .shop-rating {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Debug Center</a>
+        <h1>🌍 Print Shops Network Debug</h1>
+        <p>View all print shops, test location services, and verify shop data</p>
+    </div>
+
+    <div class="controls">
+        <h3>🔧 Controls</h3>
+        <div class="control-group">
+            <button onclick="loadAllPrintShops()" class="btn btn-primary">🔄 Load All Print Shops</button>
+            <button onclick="testLocationSearch()" class="btn btn-success">📍 Test Location Search</button>
+            <div class="input-group">
+                <label>Latitude:</label>
+                <input type="number" id="lat" value="45.4215" step="0.0001">
+            </div>
+            <div class="input-group">
+                <label>Longitude:</label>
+                <input type="number" id="lng" value="-75.6972" step="0.0001">
+            </div>
+            <div class="input-group">
+                <label>Radius (km):</label>
+                <input type="number" id="radius" value="25" min="1" max="100">
+            </div>
+        </div>
+    </div>
+
+    <div class="shops-container">
+        <div class="shops-header">
+            <h3 id="shopsTitle">Print Shops Network</h3>
+        </div>
+        <div id="shopsContent">
+            <div class="loading">
+                <p>🔄 Loading print shops...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allPrintShops = [];
+
+        // Load all print shops
+        async function loadAllPrintShops() {
+            try {
+                document.getElementById('shopsContent').innerHTML = '<div class="loading"><p>🔄 Loading print shops...</p></div>';
+                
+                // Use a large radius to get all shops
+                const response = await fetch('/.netlify/functions/nearby-shops?lat=45.4215&lng=-75.6972&radius=10000');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                allPrintShops = data.printShops || [];
+                
+                updateShopsDisplay();
+                document.getElementById('shopsTitle').textContent = `Print Shops Network (${allPrintShops.length} shops)`;
+                
+            } catch (error) {
+                console.error('Error loading print shops:', error);
+                document.getElementById('shopsContent').innerHTML = `
+                    <div class="error">
+                        <strong>Error loading print shops:</strong> ${error.message}
+                        <br><br>
+                        <button onclick="loadAllPrintShops()" class="btn btn-primary">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Test location-based search
+        async function testLocationSearch() {
+            const lat = document.getElementById('lat').value;
+            const lng = document.getElementById('lng').value;
+            const radius = document.getElementById('radius').value;
+            
+            try {
+                document.getElementById('shopsContent').innerHTML = '<div class="loading"><p>🔄 Searching nearby print shops...</p></div>';
+                
+                const response = await fetch(`/.netlify/functions/nearby-shops?lat=${lat}&lng=${lng}&radius=${radius}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                allPrintShops = data.printShops || [];
+                
+                updateShopsDisplay();
+                document.getElementById('shopsTitle').textContent = `Nearby Print Shops (${allPrintShops.length} within ${radius}km)`;
+                
+            } catch (error) {
+                console.error('Error searching print shops:', error);
+                document.getElementById('shopsContent').innerHTML = `
+                    <div class="error">
+                        <strong>Error searching print shops:</strong> ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        // Update the shops display
+        function updateShopsDisplay() {
+            const container = document.getElementById('shopsContent');
+            
+            if (allPrintShops.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h4>No print shops found</h4>
+                        <p>No print shops found in the specified area.</p>
+                        <button onclick="loadAllPrintShops()" class="btn btn-primary">Load All Shops</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const shopsHTML = `
+                <div class="shops-grid">
+                    ${allPrintShops.map(shop => `
+                        <div class="shop-card">
+                            <h4>${shop.name}</h4>
+                            <p><strong>📍 Address:</strong> ${shop.address}</p>
+                            <p><strong>🎯 Specialty:</strong> ${shop.specialty}</p>
+                            <p><strong>⭐ Rating:</strong> <span class="shop-rating">${shop.rating}/5.0</span></p>
+                            ${shop.distance_km ? `<p><strong>📏 Distance:</strong> ${shop.distance_km.toFixed(1)} km</p>` : ''}
+                            <p><strong>📞 Phone:</strong> ${shop.phone || 'Not available'}</p>
+                            <p><strong>✉️ Email:</strong> ${shop.email || 'Not available'}</p>
+                            <p><strong>🌐 Website:</strong> ${shop.website ? `<a href="${shop.website}" target="_blank">Visit</a>` : 'Not available'}</p>
+                            <p><strong>🏪 Status:</strong> ${shop.active !== false ? '✅ Active' : '❌ Inactive'}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+            
+            container.innerHTML = shopsHTML;
+        }
+
+        // Load all print shops on page load
+        loadAllPrintShops();
+    </script>
+</body>
+</html>
