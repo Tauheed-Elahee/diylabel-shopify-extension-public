@@ -13,6 +13,7 @@ import {
   useCartLines,
   useAttributes,
   useApplyAttributeChange,
+  useBuyerIdentity,
 } from "@shopify/ui-extensions-react/checkout";
 import { useState, useEffect } from "react";
 
@@ -46,6 +47,7 @@ function Extension() {
   const cartLines = useCartLines();
   const attributes = useAttributes();
   const applyAttributeChange = useApplyAttributeChange();
+  const buyerIdentity = useBuyerIdentity();
 
   // Check if DIY Label is already enabled
   const diyLabelEnabled = attributes.find(attr => attr.key === 'diy_label_enabled')?.value === 'true';
@@ -314,23 +316,38 @@ function Extension() {
             quantity: line.quantity,
             title: line.merchandise.__typename === 'ProductVariant' ? 
                    line.merchandise.product?.title || 'Unknown Product' : 'Unknown Product',
-            variant_id: line.merchandise.id
+            variant_id: line.merchandise.id,
+            variant_title: line.merchandise.__typename === 'ProductVariant' ? 
+                          line.merchandise.title || '' : '',
+            price: line.cost?.totalAmount?.amount || 0,
+            product_id: line.merchandise.__typename === 'ProductVariant' ? 
+                       line.merchandise.product?.id || '' : ''
           })),
           total: cartLines.reduce((sum, line) => sum + (line.cost?.totalAmount?.amount || 0), 0),
-          currency: cartLines[0]?.cost?.totalAmount?.currencyCode || 'USD'
+          currency: cartLines[0]?.cost?.totalAmount?.currencyCode || 'USD',
+          item_count: cartLines.reduce((sum, line) => sum + line.quantity, 0)
         },
         customerData: {
-          name: 'Pickup Extension Customer',
-          email: 'pickup-extension@example.com',
+          name: buyerIdentity?.customer ? 
+                `${buyerIdentity.customer.firstName || ''} ${buyerIdentity.customer.lastName || ''}`.trim() || 'Checkout Customer' :
+                'Checkout Customer',
+          email: buyerIdentity?.customer?.email || buyerIdentity?.email || 'checkout-customer@example.com',
+          phone: buyerIdentity?.customer?.phone || '',
           shipping_address: shippingAddress,
-          customer_location: addressString
+          customer_location: addressString,
+          customer_id: buyerIdentity?.customer?.id || null
         },
         options: {
           source: 'pickup_extension',
           extension_version: '1.0',
           print_shop_selection: shop,
-          user_agent: 'checkout-extension',
-          created_at: new Date().toISOString()
+          user_agent: 'pickup-checkout-extension',
+          created_at: new Date().toISOString(),
+          buyer_identity: buyerIdentity ? {
+            email: buyerIdentity.email,
+            phone: buyerIdentity.phone,
+            customer_id: buyerIdentity.customer?.id
+          } : null
         }
       };
 
