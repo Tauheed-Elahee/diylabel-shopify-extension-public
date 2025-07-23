@@ -300,11 +300,14 @@ function Extension() {
     // Validate customer information before creating order
     const missingInfo = [];
     
-    // Check customer contact info from useCustomer hook
-    if (!customer?.email || customer.email.trim().length === 0) {
-      missingInfo.push('Email address');
-    } else if (!customer.email.includes('@')) {
-      missingInfo.push('Valid email address');
+    // Check customer contact info - be more flexible during checkout
+    // Email might not be available through useCustomer until checkout completion
+    const hasEmail = customer?.email && customer.email.trim().length > 0 && customer.email.includes('@');
+    
+    // Only require email if we can't get it from the customer object
+    // The webhook will capture the real email when the order is processed
+    if (!hasEmail) {
+      console.log('📧 Email not available through useCustomer, will be captured by webhook');
     }
     
     // Check shipping address
@@ -356,6 +359,9 @@ function Extension() {
         [customer?.firstName, customer?.lastName].filter(Boolean).join(' ').trim() ||
         'Delivery Extension Customer';
       
+      // Use available email or placeholder (webhook will update with real email)
+      const customerEmail = customer?.email || 'checkout-extension@placeholder.com';
+      
       // Prepare order data
       const orderData = {
         shopifyOrderId: `delivery-checkout-${Date.now()}`,
@@ -380,7 +386,7 @@ function Extension() {
         },
         customerData: {
           name: fullName,
-          email: customer?.email || '',
+          email: customerEmail,
           phone: customer?.phone || '',
           shipping_address: shippingAddress,
           customer_location: addressString,
@@ -395,7 +401,7 @@ function Extension() {
           shipping_address: shippingAddress,
           customer_info: {
             name: fullName,
-            email: customer?.email,
+            email: customerEmail,
             phone: customer?.phone,
             customer_id: customer?.id
           }
