@@ -151,8 +151,17 @@ function Extension() {
   // Watch for address changes and fetch print shops
   useEffect(() => {
     const loadPrintShopsForAddress = async () => {
+      console.log('🚢 loadPrintShopsForAddress called', {
+        hasShippingAddress: !!shippingAddress,
+        hasCity: !!shippingAddress?.city,
+        hasAddress1: !!shippingAddress?.address1,
+        addressString,
+        shippingAddressDetails: shippingAddress
+      });
+
       if (!shippingAddress || !shippingAddress.city) {
         // Clear print shops if no valid address
+        console.log('🚢 No valid address, clearing print shops');
         setPrintShops([]);
         setSelectedPrintShop("");
         return;
@@ -164,6 +173,7 @@ function Extension() {
       const coordinates = await geocodeAddress(shippingAddress);
       
       if (coordinates) {
+        console.log('🚢 Got coordinates, fetching print shops:', coordinates);
         await fetchPrintShops(coordinates.lat, coordinates.lng);
       } else {
         // Fallback to a default location if geocoding fails
@@ -172,6 +182,7 @@ function Extension() {
       }
     };
 
+    console.log('🚢 useEffect triggered', { addressString, hasShippingAddress: !!shippingAddress });
     // Only load print shops if DIY Label is not already enabled
     if (!diyLabelEnabled) {
       loadPrintShopsForAddress();
