@@ -370,14 +370,29 @@ function Extension() {
           line_items: cartLines.map(line => ({
             id: line.id,
             quantity: line.quantity,
-            title: line.merchandise.__typename === 'ProductVariant' ? 
-                   line.merchandise.product?.title || 'Unknown Product' : 'Unknown Product',
+            title: line.merchandise.__typename === 'ProductVariant' && line.merchandise.product ? 
+                   line.merchandise.product.title : 'Unknown Product',
             variant_id: line.merchandise.id,
             variant_title: line.merchandise.__typename === 'ProductVariant' ? 
-                          line.merchandise.title || '' : '',
+                          line.merchandise.title : '',
             price: line.cost?.totalAmount?.amount || 0,
-            product_id: line.merchandise.__typename === 'ProductVariant' ? 
-                       line.merchandise.product?.id || '' : ''
+            product_id: line.merchandise.__typename === 'ProductVariant' && line.merchandise.product ? 
+                       line.merchandise.product.id : '',
+            // Add more product details for debugging
+            product_handle: line.merchandise.__typename === 'ProductVariant' && line.merchandise.product ? 
+                           line.merchandise.product.handle : '',
+            merchandise_type: line.merchandise.__typename,
+            // Debug info
+            debug_merchandise: {
+              type: line.merchandise.__typename,
+              id: line.merchandise.id,
+              title: line.merchandise.title,
+              product: line.merchandise.__typename === 'ProductVariant' ? {
+                id: line.merchandise.product?.id,
+                title: line.merchandise.product?.title,
+                handle: line.merchandise.product?.handle
+              } : null
+            }
           })),
           total: cartLines.reduce((sum, line) => sum + (line.cost?.totalAmount?.amount || 0), 0),
           currency: cartLines[0]?.cost?.totalAmount?.currencyCode || 'USD',
