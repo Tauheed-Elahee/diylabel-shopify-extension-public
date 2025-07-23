@@ -12,6 +12,8 @@ import {
   useCartLines,
   useAttributes,
   useApplyAttributeChange,
+  useEmail,
+  usePhone,
 } from "@shopify/ui-extensions-react/checkout";
 import { useState, useEffect } from "react";
 
@@ -47,6 +49,8 @@ function Extension() {
   const cartLines = useCartLines();
   const attributes = useAttributes();
   const applyAttributeChange = useApplyAttributeChange();
+  const email = useEmail();
+  const phone = usePhone();
 
   // Check if DIY Label is already enabled
   const diyLabelEnabled = attributes.find(attr => attr.key === 'diy_label_enabled')?.value === 'true';
@@ -295,9 +299,17 @@ function Extension() {
       return;
     }
 
-    // Validate shipping address information before creating order
+    // Validate customer information before creating order
     const missingInfo = [];
     
+    // Check customer contact info
+    if (!email || email.trim().length === 0) {
+      missingInfo.push('Email address');
+    } else if (!email.includes('@')) {
+      missingInfo.push('Valid email address');
+    }
+    
+    // Check shipping address
     if (!shippingAddress?.address1) {
       missingInfo.push('Shipping address');
     }
@@ -309,6 +321,16 @@ function Extension() {
     }
     if (!shippingAddress?.zip) {
       missingInfo.push('Postal/ZIP code');
+    }
+    
+    // Check if we have a customer name from shipping address
+    const customerName = [shippingAddress?.firstName, shippingAddress?.lastName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    
+    if (!customerName || customerName.length < 2) {
+      missingInfo.push('Customer name');
     }
     
     if (missingInfo.length > 0) {
@@ -327,6 +349,9 @@ function Extension() {
       const shopDomain = 'diy-label.myshopify.com';
       console.log('🚢 Using shop domain:', shopDomain);
 
+      // Extract customer name from shipping address
+      const fullName = customerName;
+      
       // Prepare order data
       const orderData = {
         shopifyOrderId: `delivery-checkout-${Date.now()}`,
@@ -350,9 +375,9 @@ function Extension() {
           item_count: cartLines.reduce((sum, line) => sum + line.quantity, 0)
         },
         customerData: {
-          name: 'Checkout Customer',
-          email: 'customer@checkout.com',
-          phone: '',
+          name: fullName,
+          email: email || '',
+          phone: phone || '',
           shipping_address: shippingAddress,
           customer_location: addressString,
           customer_id: null
@@ -363,7 +388,12 @@ function Extension() {
           print_shop_selection: shop,
           user_agent: 'delivery-checkout-extension',
           created_at: new Date().toISOString(),
-          shipping_address: shippingAddress
+          shipping_address: shippingAddress,
+          customer_info: {
+            name: fullName,
+            email: email,
+            phone: phone
+          }
         }
       };
 
