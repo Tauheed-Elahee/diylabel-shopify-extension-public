@@ -255,8 +255,30 @@ export default function Index() {
     });
   };
 
+  const formatProductDisplay = (productData: any) => {
+    if (!productData || !productData.line_items || !Array.isArray(productData.line_items)) {
+      return 'Unknown Product';
+    }
+
+    const items = productData.line_items.map((item: any) => {
+      const title = item.title || 'Unknown Product';
+      const productId = item.product_id ? item.product_id.replace('gid://shopify/Product/', '') : 'No ID';
+      return `${title} (ID: ${productId})`;
+    });
+
+    if (items.length === 1) {
+      return items[0];
+    } else if (items.length > 1) {
+      return `Multiple Products: ${items.join(', ')}`;
+    }
+
+    return 'Unknown Product';
+  };
+
   const orderRows = recentOrders.map(order => [
     order.shopify_order_id,
+    formatProductDisplay(order.product_data),
+    order.customer_data?.name || 'Unknown Customer',
     order.print_shops?.name || 'Unassigned',
     <Badge key={order.id} status={
       order.status === 'completed' ? 'success' :
@@ -445,7 +467,7 @@ export default function Index() {
                 ) : (
                   <DataTable
                     columnContentTypes={['text', 'text', 'text', 'text']}
-                    headings={['Order ID', 'Print Shop', 'Status', 'Date']}
+                    headings={['Order ID', 'Product', 'Customer', 'Print Shop', 'Status', 'Date']}
                     rows={orderRows}
                   />
                 )}
