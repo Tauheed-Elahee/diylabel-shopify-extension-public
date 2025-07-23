@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIY Label Orders Debug</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+        }
+        .header {
+            background: linear-gradient(135deg, #007cba, #0056b3);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.2em;
+        }
+        .back-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .controls h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+        }
+        .control-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+        .btn-primary {
+            background: #007cba;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        .status-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .status-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .status-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007cba;
+            margin-bottom: 5px;
+        }
+        .status-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .orders-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .orders-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .orders-header h3 {
+            margin: 0;
+            color: #333;
+        }
+        .orders-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .orders-table th,
+        .orders-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .orders-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        .orders-table tr:hover {
+            background: #f8f9fa;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+        .empty-state h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filter-input {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Debug Center</a>
+        <h1>📋 DIY Label Orders Debug</h1>
+        <p>View and analyze all DIY Label orders with detailed information</p>
+    </div>
+
+    <div class="controls">
+        <h3>🔧 Controls</h3>
+        <div class="control-group">
+            <button onclick="loadOrders()" class="btn btn-primary">🔄 Refresh Orders</button>
+            <button onclick="testOrderCreation()" class="btn btn-success">🧪 Test Order Creation</button>
+            <button onclick="exportOrders()" class="btn btn-warning">📊 Export Data</button>
+            <div class="filter-controls">
+                <input type="text" id="searchFilter" placeholder="Search orders..." class="filter-input" onkeyup="filterOrders()">
+                <select id="statusFilter" class="filter-select" onchange="filterOrders()">
+                    <option value="">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="printing">Printing</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-card">
+        <h3>📊 Orders Overview</h3>
+        <div class="status-grid">
+            <div class="status-item">
+                <div class="status-number" id="totalOrders">-</div>
+                <div class="status-label">Total Orders</div>
+            </div>
+            <div class="status-item">
+                <div class="status-number" id="pendingOrders">-</div>
+                <div class="status-label">Pending</div>
+            </div>
+            <div class="status-item">
+                <div class="status-number" id="completedOrders">-</div>
+                <div class="status-label">Completed</div>
+            </div>
+            <div class="status-item">
+                <div class="status-number" id="totalRevenue">-</div>
+                <div class="status-label">Total Revenue</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="orders-container">
+        <div class="orders-header">
+            <h3>All DIY Label Orders</h3>
+        </div>
+        <div id="ordersContent">
+            <div class="loading">
+                <p>🔄 Loading orders...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allOrders = [];
+        let filteredOrders = [];
+
+        // Load orders from Supabase via Netlify function
+        async function loadOrders() {
+            try {
+                document.getElementById('ordersContent').innerHTML = '<div class="loading"><p>🔄 Loading orders...</p></div>';
+                
+                // We'll need to create a new Netlify function to fetch orders
+                const response = await fetch('/.netlify/functions/get-orders');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                allOrders = data.orders || [];
+                filteredOrders = [...allOrders];
+                
+                updateOrdersDisplay();
+                updateStats();
+                
+            } catch (error) {
+                console.error('Error loading orders:', error);
+                document.getElementById('ordersContent').innerHTML = `
+                    <div class="error">
+                        <strong>Error loading orders:</strong> ${error.message}
+                        <br><br>
+                        <button onclick="loadOrders()" class="btn btn-primary">Try Again</button>
+                    </div>
+                `;
+            }
+        }
+
+        // Update the orders display
+        function updateOrdersDisplay() {
+            const container = document.getElementById('ordersContent');
+            
+            if (filteredOrders.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h4>No orders found</h4>
+                        <p>No DIY Label orders match your current filters.</p>
+                        <button onclick="clearFilters()" class="btn btn-primary">Clear Filters</button>
+                    </div>
+                `;
+                return;
+            }
+
+            const tableHTML = `
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Product</th>
+                            <th>Customer</th>
+                            <th>Print Shop</th>
+                            <th>Status</th>
+                            <th>Total</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${filteredOrders.map(order => `
+                            <tr>
+                                <td><code>${order.shopify_order_id}</code></td>
+                                <td>${formatProductDisplay(order.product_data)}</td>
+                                <td>${order.customer_data?.name || 'Unknown Customer'}</td>
+                                <td>${order.print_shop_name || 'Unassigned'}</td>
+                                <td><span class="status-badge status-${order.status}">${order.status.charAt(0).toUpperCase() + order.status.slice(1)}</span></td>
+                                <td>${formatCurrency(order.product_data?.total || 0)}</td>
+                                <td>${formatDate(order.created_at)}</td>
+                                <td>
+                                    <button onclick="viewOrderDetails('${order.id}')" class="btn btn-primary" style="padding: 5px 10px; font-size: 12px;">View</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = tableHTML;
+        }
+
+        // Format product display
+        function formatProductDisplay(productData) {
+            if (!productData || !productData.line_items || !Array.isArray(productData.line_items)) {
+                return 'Unknown Product';
+            }
+
+            const items = productData.line_items.map(item => {
+                const title = item.title || 'Unknown Product';
+                const productId = item.product_id ? 
+                    item.product_id.replace('gid://shopify/Product/', '') : 'No ID';
+                return `${title} (ID: ${productId})`;
+            });
+
+            if (items.length === 1) {
+                return items[0];
+            } else if (items.length > 1) {
+                return `Multiple Products: ${items.join(', ')}`;
+            }
+
+            return 'Unknown Product';
+        }
+
+        // Format currency
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD'
+            }).format(amount);
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Update statistics
+        function updateStats() {
+            document.getElementById('totalOrders').textContent = allOrders.length;
+            document.getElementById('pendingOrders').textContent = allOrders.filter(o => o.status === 'pending').length;
+            document.getElementById('completedOrders').textContent = allOrders.filter(o => o.status === 'completed').length;
+            
+            const totalRevenue = allOrders.reduce((sum, order) => sum + (order.product_data?.total || 0), 0);
+            document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
+        }
+
+        // Filter orders
+        function filterOrders() {
+            const searchTerm = document.getElementById('searchFilter').value.toLowerCase();
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            filteredOrders = allOrders.filter(order => {
+                const matchesSearch = !searchTerm || 
+                    order.shopify_order_id.toLowerCase().includes(searchTerm) ||
+                    (order.customer_data?.name || '').toLowerCase().includes(searchTerm) ||
+                    (order.print_shop_name || '').toLowerCase().includes(searchTerm);
+                
+                const matchesStatus = !statusFilter || order.status === statusFilter;
+                
+                return matchesSearch && matchesStatus;
+            });
+            
+            updateOrdersDisplay();
+        }
+
+        // Clear filters
+        function clearFilters() {
+            document.getElementById('searchFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            filteredOrders = [...allOrders];
+            updateOrdersDisplay();
+        }
+
+        // Test order creation
+        async function testOrderCreation() {
+            try {
+                const testData = {
+                    shopifyOrderId: `debug-test-${Date.now()}`,
+                    shopDomain: 'diy-label.myshopify.com',
+                    printShopId: 1,
+                    productData: {
+                        line_items: [{
+                            id: "debug-test-1",
+                            quantity: 1,
+                            title: "Debug Test Product",
+                            variant_id: "test-variant-debug"
+                        }],
+                        total: 25.00,
+                        currency: "USD"
+                    },
+                    customerData: {
+                        name: "Debug Test Customer",
+                        email: "debug-test@example.com"
+                    }
+                };
+
+                const response = await fetch('/.netlify/functions/diy-label-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testData)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Test order created successfully!');
+                    loadOrders(); // Refresh the list
+                } else {
+                    alert('❌ Test order failed: ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Network error: ' + error.message);
+            }
+        }
+
+        // Export orders
+        function exportOrders() {
+            const csv = [
+                ['Order ID', 'Product', 'Customer', 'Print Shop', 'Status', 'Total', 'Date'],
+                ...filteredOrders.map(order => [
+                    order.shopify_order_id,
+                    formatProductDisplay(order.product_data),
+                    order.customer_data?.name || 'Unknown',
+                    order.print_shop_name || 'Unassigned',
+                    order.status,
+                    order.product_data?.total || 0,
+                    formatDate(order.created_at)
+                ])
+            ].map(row => row.join(',')).join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `diy-label-orders-${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // View order details
+        function viewOrderDetails(orderId) {
+            const order = allOrders.find(o => o.id === orderId);
+            if (order) {
+                const details = `
+Order ID: ${order.shopify_order_id}
+Product: ${formatProductDisplay(order.product_data)}
+Customer: ${order.customer_data?.name || 'Unknown'}
+Email: ${order.customer_data?.email || 'Unknown'}
+Print Shop: ${order.print_shop_name || 'Unassigned'}
+Status: ${order.status}
+Total: ${formatCurrency(order.product_data?.total || 0)}
+Created: ${formatDate(order.created_at)}
+
+Raw Data:
+${JSON.stringify(order, null, 2)}
+                `;
+                alert(details);
+            }
+        }
+
+        // Load orders on page load
+        loadOrders();
+    </script>
+</body>
+</html>

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIY Label Debug Center</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #007cba, #0056b3);
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.5em;
+        }
+        .header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        .category {
+            margin-bottom: 30px;
+        }
+        .category h2 {
+            color: #333;
+            border-bottom: 3px solid #007cba;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .debug-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+        .debug-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-left: 4px solid #007cba;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .debug-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+        .debug-card h3 {
+            margin: 0 0 15px 0;
+            color: #007cba;
+            font-size: 1.3em;
+        }
+        .debug-card p {
+            margin: 0 0 20px 0;
+            color: #666;
+            font-size: 0.95em;
+        }
+        .debug-link {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #007cba;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background 0.2s ease;
+        }
+        .debug-link:hover {
+            background: #0056b3;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-working { background: #28a745; }
+        .status-warning { background: #ffc107; }
+        .status-error { background: #dc3545; }
+        .quick-start {
+            background: #e3f2fd;
+            border: 1px solid #2196f3;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        .quick-start h2 {
+            color: #1976d2;
+            margin: 0 0 20px 0;
+        }
+        .quick-start-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .quick-start-item {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+        }
+        .quick-start-item h4 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+        .quick-start-item ol {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 14px;
+        }
+        .api-status {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .api-status h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+        }
+        .api-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .api-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+        .api-item h4 {
+            margin: 0 0 5px 0;
+            font-size: 14px;
+            color: #333;
+        }
+        .api-item a {
+            color: #007cba;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        .api-item a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 DIY Label Debug Center</h1>
+        <p>Comprehensive debugging tools for DIY Label Shopify integration</p>
+        <p id="timestamp">Last updated: <span id="current-time"></span></p>
+    </div>
+
+    <div class="quick-start">
+        <h2>🚀 Quick Start Guide</h2>
+        <div class="quick-start-grid">
+            <div class="quick-start-item">
+                <h4>1. First Time Setup</h4>
+                <ol>
+                    <li>Check <strong>Orders Debug</strong> below</li>
+                    <li>Verify database connection</li>
+                    <li>Test API endpoints</li>
+                </ol>
+            </div>
+            <div class="quick-start-item">
+                <h4>2. Checkout Issues</h4>
+                <ol>
+                    <li>Use <strong>API Test</strong> pages</li>
+                    <li>Check order creation</li>
+                    <li>Test in checkout flow</li>
+                </ol>
+            </div>
+            <div class="quick-start-item">
+                <h4>3. Data Problems</h4>
+                <ol>
+                    <li>Check <strong>Database Status</strong></li>
+                    <li>Verify print shops data</li>
+                    <li>Test order processing</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <div class="api-status">
+        <h3>📡 API Status</h3>
+        <div class="api-grid">
+            <div class="api-item">
+                <h4><span class="status-indicator status-working"></span>Print Shops API</h4>
+                <a href="/.netlify/functions/nearby-shops?lat=37.7749&lng=-122.4194&radius=25" target="_blank">Test Endpoint →</a>
+            </div>
+            <div class="api-item">
+                <h4><span class="status-indicator status-working"></span>Order Creation API</h4>
+                <a href="/.netlify/functions/diy-label-order" target="_blank">View Endpoint →</a>
+            </div>
+            <div class="api-item">
+                <h4><span class="status-indicator status-working"></span>Checkout Order API</h4>
+                <a href="/.netlify/functions/checkout-order" target="_blank">View Endpoint →</a>
+            </div>
+            <div class="api-item">
+                <h4><span class="status-indicator status-working"></span>Widget Data API</h4>
+                <a href="/.netlify/functions/widget-data?shop=diy-label.myshopify.com" target="_blank">Test Endpoint →</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="category">
+        <h2>🎯 Primary Debug Tools</h2>
+        <div class="debug-grid">
+            <div class="debug-card">
+                <h3>📋 Orders Debug</h3>
+                <p>View all DIY Label orders with detailed information including product names, customer data, and order status.</p>
+                <a href="orders.html" class="debug-link">View Orders →</a>
+            </div>
+            <div class="debug-card">
+                <h3>🧪 API Test Suite</h3>
+                <p>Test all API endpoints including print shops, order creation, and checkout integration.</p>
+                <a href="api-test.html" class="debug-link">Test APIs →</a>
+            </div>
+            <div class="debug-card">
+                <h3>🗄️ Database Status</h3>
+                <p>Check database connection, table structure, and data integrity for all DIY Label components.</p>
+                <a href="database.html" class="debug-link">Check Database →</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="category">
+        <h2>🔧 Troubleshooting Tools</h2>
+        <div class="debug-grid">
+            <div class="debug-card">
+                <h3>🛒 Cart & Checkout</h3>
+                <p>Debug cart attributes, checkout extensions, and order processing flow.</p>
+                <a href="checkout.html" class="debug-link">Debug Checkout →</a>
+            </div>
+            <div class="debug-card">
+                <h3>🏪 Store Management</h3>
+                <p>View connected stores, authentication status, and store-specific settings.</p>
+                <a href="stores.html" class="debug-link">Manage Stores →</a>
+            </div>
+            <div class="debug-card">
+                <h3>🌍 Print Shops Network</h3>
+                <p>View all print shops, test location services, and verify shop data.</p>
+                <a href="print-shops.html" class="debug-link">View Network →</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="category">
+        <h2>📊 Analytics & Reports</h2>
+        <div class="debug-grid">
+            <div class="debug-card">
+                <h3>📈 System Health</h3>
+                <p>Overall system status, performance metrics, and health indicators.</p>
+                <a href="health.html" class="debug-link">View Health →</a>
+            </div>
+            <div class="debug-card">
+                <h3>🔍 Error Logs</h3>
+                <p>View recent errors, failed requests, and system issues.</p>
+                <a href="errors.html" class="debug-link">View Errors →</a>
+            </div>
+            <div class="debug-card">
+                <h3>📋 Activity Log</h3>
+                <p>Recent orders, API calls, and system activity timeline.</p>
+                <a href="activity.html" class="debug-link">View Activity →</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Update timestamp
+        document.getElementById('current-time').textContent = new Date().toLocaleString();
+        
+        // Test API connectivity and update status indicators
+        async function testAPIConnectivity() {
+            const endpoints = [
+                { url: '/.netlify/functions/nearby-shops?lat=37.7749&lng=-122.4194&radius=25', indicator: 0 },
+                { url: '/.netlify/functions/widget-data?shop=diy-label.myshopify.com', indicator: 1 }
+            ];
+            
+            const indicators = document.querySelectorAll('.status-indicator');
+            
+            for (let i = 0; i < endpoints.length; i++) {
+                try {
+                    const response = await fetch(endpoints[i].url);
+                    if (response.ok) {
+                        indicators[endpoints[i].indicator].className = 'status-indicator status-working';
+                    } else {
+                        indicators[endpoints[i].indicator].className = 'status-indicator status-warning';
+                    }
+                } catch (error) {
+                    indicators[endpoints[i].indicator].className = 'status-indicator status-error';
+                }
+            }
+        }
+        
+        // Test API connectivity on page load
+        testAPIConnectivity();
+    </script>
+</body>
+</html>

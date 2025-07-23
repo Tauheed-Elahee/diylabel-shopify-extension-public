@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIY Label API Test Suite</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #f8f9fa;
+        }
+        .header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 2.2em;
+        }
+        .back-link {
+            display: inline-block;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        .back-link:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .test-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .test-section h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            border-bottom: 2px solid #28a745;
+            padding-bottom: 10px;
+        }
+        .test-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+        .btn-primary {
+            background: #007cba;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .input-group label {
+            font-weight: 600;
+            color: #495057;
+        }
+        .input-group input {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .result-container {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .result-success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        .result-error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        .result-header {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .result-content {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-working { background: #28a745; }
+        .status-warning { background: #ffc107; }
+        .status-error { background: #dc3545; }
+        .status-testing { background: #007cba; }
+        .endpoint-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #2196f3;
+        }
+        .endpoint-info code {
+            background: rgba(0,0,0,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Debug Center</a>
+        <h1>🧪 API Test Suite</h1>
+        <p>Test all DIY Label API endpoints and verify functionality</p>
+    </div>
+
+    <div class="test-section">
+        <h3><span class="status-indicator status-working" id="printShopsStatus"></span>Print Shops API</h3>
+        <div class="endpoint-info">
+            <strong>Endpoint:</strong> <code>/.netlify/functions/nearby-shops</code><br>
+            <strong>Purpose:</strong> Find print shops near a specific location
+        </div>
+        <div class="test-controls">
+            <div class="input-group">
+                <label>Latitude:</label>
+                <input type="number" id="lat" value="37.7749" step="0.0001">
+            </div>
+            <div class="input-group">
+                <label>Longitude:</label>
+                <input type="number" id="lng" value="-122.4194" step="0.0001">
+            </div>
+            <div class="input-group">
+                <label>Radius (km):</label>
+                <input type="number" id="radius" value="25" min="1" max="100">
+            </div>
+            <button onclick="testPrintShopsAPI()" class="btn btn-success">Test Print Shops API</button>
+        </div>
+        <div id="printShopsResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3><span class="status-indicator status-working" id="orderCreationStatus"></span>Order Creation API</h3>
+        <div class="endpoint-info">
+            <strong>Endpoint:</strong> <code>/.netlify/functions/diy-label-order</code><br>
+            <strong>Purpose:</strong> Create new DIY Label orders
+        </div>
+        <div class="test-controls">
+            <button onclick="testOrderCreationAPI()" class="btn btn-success">Test Order Creation</button>
+            <button onclick="testCheckoutOrderAPI()" class="btn btn-primary">Test Checkout Order</button>
+        </div>
+        <div id="orderCreationResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3><span class="status-indicator status-working" id="widgetDataStatus"></span>Widget Data API</h3>
+        <div class="endpoint-info">
+            <strong>Endpoint:</strong> <code>/.netlify/functions/widget-data</code><br>
+            <strong>Purpose:</strong> Get store and product settings for widget
+        </div>
+        <div class="test-controls">
+            <div class="input-group">
+                <label>Shop Domain:</label>
+                <input type="text" id="shopDomain" value="diy-label.myshopify.com">
+            </div>
+            <div class="input-group">
+                <label>Product ID:</label>
+                <input type="text" id="productId" value="test" placeholder="Optional">
+            </div>
+            <button onclick="testWidgetDataAPI()" class="btn btn-success">Test Widget Data</button>
+        </div>
+        <div id="widgetDataResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3><span class="status-indicator status-working" id="geocodeStatus"></span>Geocoding API</h3>
+        <div class="endpoint-info">
+            <strong>Endpoint:</strong> <code>/.netlify/functions/geocode</code><br>
+            <strong>Purpose:</strong> Convert addresses to coordinates
+        </div>
+        <div class="test-controls">
+            <div class="input-group">
+                <label>Address:</label>
+                <input type="text" id="address" value="123 Main St, Toronto, ON, Canada" style="width: 300px;">
+            </div>
+            <button onclick="testGeocodeAPI()" class="btn btn-success">Test Geocoding</button>
+        </div>
+        <div id="geocodeResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h3><span class="status-indicator status-working" id="ordersListStatus"></span>Orders List API</h3>
+        <div class="endpoint-info">
+            <strong>Endpoint:</strong> <code>/.netlify/functions/get-orders</code><br>
+            <strong>Purpose:</strong> Retrieve all DIY Label orders
+        </div>
+        <div class="test-controls">
+            <button onclick="testOrdersListAPI()" class="btn btn-success">Test Orders List</button>
+        </div>
+        <div id="ordersListResult"></div>
+    </div>
+
+    <script>
+        // Test Print Shops API
+        async function testPrintShopsAPI() {
+            const lat = document.getElementById('lat').value;
+            const lng = document.getElementById('lng').value;
+            const radius = document.getElementById('radius').value;
+            
+            const indicator = document.getElementById('printShopsStatus');
+            const resultDiv = document.getElementById('printShopsResult');
+            
+            indicator.className = 'status-indicator status-testing';
+            resultDiv.innerHTML = '<div class="result-container"><div class="result-header">Testing...</div></div>';
+            
+            try {
+                const url = `/.netlify/functions/nearby-shops?lat=${lat}&lng=${lng}&radius=${radius}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    indicator.className = 'status-indicator status-working';
+                    resultDiv.innerHTML = `
+                        <div class="result-container result-success">
+                            <div class="result-header">✅ Success - Found ${data.printShops?.length || 0} print shops</div>
+                            <div class="result-content">${JSON.stringify(data, null, 2)}</div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${data.error || response.statusText}`);
+                }
+            } catch (error) {
+                indicator.className = 'status-indicator status-error';
+                resultDiv.innerHTML = `
+                    <div class="result-container result-error">
+                        <div class="result-header">❌ Error</div>
+                        <div class="result-content">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Test Order Creation API
+        async function testOrderCreationAPI() {
+            const indicator = document.getElementById('orderCreationStatus');
+            const resultDiv = document.getElementById('orderCreationResult');
+            
+            indicator.className = 'status-indicator status-testing';
+            resultDiv.innerHTML = '<div class="result-container"><div class="result-header">Testing...</div></div>';
+            
+            const testData = {
+                shopifyOrderId: `api-test-${Date.now()}`,
+                shopDomain: 'diy-label.myshopify.com',
+                printShopId: 1,
+                productData: {
+                    line_items: [{
+                        id: "api-test-1",
+                        quantity: 1,
+                        title: "API Test Product",
+                        variant_id: "test-variant-api"
+                    }],
+                    total: 25.00,
+                    currency: "USD"
+                },
+                customerData: {
+                    name: "API Test Customer",
+                    email: "api-test@example.com"
+                }
+            };
+            
+            try {
+                const response = await fetch('/.netlify/functions/diy-label-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    indicator.className = 'status-indicator status-working';
+                    resultDiv.innerHTML = `
+                        <div class="result-container result-success">
+                            <div class="result-header">✅ Success - Order created: ${data.order.id}</div>
+                            <div class="result-content">${JSON.stringify(data, null, 2)}</div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                }
+            } catch (error) {
+                indicator.className = 'status-indicator status-error';
+                resultDiv.innerHTML = `
+                    <div class="result-container result-error">
+                        <div class="result-header">❌ Error</div>
+                        <div class="result-content">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Test Checkout Order API
+        async function testCheckoutOrderAPI() {
+            const indicator = document.getElementById('orderCreationStatus');
+            const resultDiv = document.getElementById('orderCreationResult');
+            
+            indicator.className = 'status-indicator status-testing';
+            
+            const testData = {
+                shopifyOrderId: `checkout-api-test-${Date.now()}`,
+                shopDomain: 'diy-label.myshopify.com',
+                printShopId: 1,
+                productData: {
+                    line_items: [{
+                        id: "checkout-api-test-1",
+                        quantity: 1,
+                        title: "Checkout API Test Product",
+                        variant_id: "test-variant-checkout-api"
+                    }],
+                    total: 30.00,
+                    currency: "USD"
+                },
+                customerData: {
+                    name: "Checkout API Test Customer",
+                    email: "checkout-api-test@example.com"
+                },
+                options: {
+                    source: "api_test_suite"
+                }
+            };
+            
+            try {
+                const response = await fetch('/.netlify/functions/checkout-order', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    indicator.className = 'status-indicator status-working';
+                    resultDiv.innerHTML = `
+                        <div class="result-container result-success">
+                            <div class="result-header">✅ Success - Checkout order created: ${data.order.id}</div>
+                            <div class="result-content">${JSON.stringify(data, null, 2)}</div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                }
+            } catch (error) {
+                indicator.className = 'status-indicator status-error';
+                resultDiv.innerHTML = `
+                    <div class="result-container result-error">
+                        <div class="result-header">❌ Error</div>
+                        <div class="result-content">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Test Widget Data API
+        async function testWidgetDataAPI() {
+            const shopDomain = document.getElementById('shopDomain').value;
+            const productId = document.getElementById('productId').value;
+            
+            const indicator = document.getElementById('widgetDataStatus');
+            const resultDiv = document.getElementById('widgetDataResult');
+            
+            indicator.className = 'status-indicator status-testing';
+            resultDiv.innerHTML = '<div class="result-container"><div class="result-header">Testing...</div></div>';
+            
+            try {
+                let url = `/.netlify/functions/widget-data?shop=${encodeURIComponent(shopDomain)}`;
+                if (productId) {
+                    url += `&product=${encodeURIComponent(productId)}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    indicator.className = 'status-indicator status-working';
+                    resultDiv.innerHTML = `
+                        <div class="result-container result-success">
+                            <div class="result-header">✅ Success - Widget data retrieved</div>
+                            <div class="result-content">${JSON.stringify(data, null, 2)}</div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${data.error || response.statusText}`);
+                }
+            } catch (error) {
+                indicator.className = 'status-indicator status-error';
+                resultDiv.innerHTML = `
+                    <div class="result-container result-error">
+                        <div class="result-header">❌ Error</div>
+                        <div class="result-content">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Test Geocoding API
+        async function testGeocodeAPI() {
+            const address = document.getElementById('address').value;
+            
+            const indicator = document.getElementById('geocodeStatus');
+            const resultDiv = document.getElementById('geocodeResult');
+            
+            indicator.className = 'status-indicator status-testing';
+            resultDiv.innerHTML = '<div class="result-container"><div class="result-header">Testing...</div></div>';
+            
+            try {
+                const url = `/.netlify/functions/geocode?address=${encodeURIComponent(address)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    indicator.className = 'status-indicator status-working';
+                    resultDiv.innerHTML = `
+                        <div class="result-container result-success">
+                            <div class="result-header">✅ Success - Address geocoded</div>
+                            <div class="result-content">${JSON.stringify(data, null, 2)}</div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${data.error || response.statusText}`);
+                }
+            } catch (error) {
+                indicator.className = 'status-indicator status-error';
+                resultDiv.innerHTML = `
+                    <div class="result-container result-error">
+                        <div class="result-header">❌ Error</div>
+                        <div class="result-content">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Test Orders List API
+        async function testOrdersListAPI() {
+            const indicator = document.getElementById('ordersListStatus');
+            const resultDiv = document.getElementById('ordersListResult');
+            
+            indicator.className = 'status-indicator status-testing';
+            resultDiv.innerHTML = '<div class="result-container"><div class="result-header">Testing...</div></div>';
+            
+            try {
+                const response = await fetch('/.netlify/functions/get-orders');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    indicator.className = 'status-indicator status-working';
+                    resultDiv.innerHTML = `
+                        <div class="result-container result-success">
+                            <div class="result-header">✅ Success - Found ${data.orders?.length || 0} orders</div>
+                            <div class="result-content">${JSON.stringify(data, null, 2)}</div>
+                        </div>
+                    `;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${data.error || response.statusText}`);
+                }
+            } catch (error) {
+                indicator.className = 'status-indicator status-error';
+                resultDiv.innerHTML = `
+                    <div class="result-container result-error">
+                        <div class="result-header">❌ Error</div>
+                        <div class="result-content">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // Auto-test all APIs on page load
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                testPrintShopsAPI();
+                setTimeout(() => testWidgetDataAPI(), 1000);
+                setTimeout(() => testOrdersListAPI(), 2000);
+            }, 500);
+        });
+    </script>
+</body>
+</html>
