@@ -297,6 +297,39 @@ function Extension() {
       return;
     }
 
+    // Validate customer information before creating order
+    const customerName = buyerIdentity?.customer ? 
+      `${buyerIdentity.customer.firstName || ''} ${buyerIdentity.customer.lastName || ''}`.trim() : '';
+    const customerEmail = buyerIdentity?.customer?.email || buyerIdentity?.email || '';
+    
+    // Check for missing customer information
+    const missingInfo = [];
+    if (!customerName || customerName.length < 2) {
+      missingInfo.push('Customer name');
+    }
+    if (!customerEmail || !customerEmail.includes('@')) {
+      missingInfo.push('Valid email address');
+    }
+    if (!shippingAddress?.address1) {
+      missingInfo.push('Shipping address');
+    }
+    if (!shippingAddress?.city) {
+      missingInfo.push('City');
+    }
+    if (!shippingAddress?.provinceCode) {
+      missingInfo.push('Province/State');
+    }
+    if (!shippingAddress?.zip) {
+      missingInfo.push('Postal/ZIP code');
+    }
+    
+    if (missingInfo.length > 0) {
+      const missingText = missingInfo.join(', ');
+      setError(`Missing customer information: ${missingText}. Please complete all required fields before creating your DIY Label order.`);
+      console.log('🚢 Missing customer information:', missingInfo);
+      return;
+    }
+
     try {
       setOrderCreating(true);
       setError('');
@@ -329,10 +362,8 @@ function Extension() {
           item_count: cartLines.reduce((sum, line) => sum + line.quantity, 0)
         },
         customerData: {
-          name: buyerIdentity?.customer ? 
-                `${buyerIdentity.customer.firstName || ''} ${buyerIdentity.customer.lastName || ''}`.trim() || 'Checkout Customer' :
-                'Checkout Customer',
-          email: buyerIdentity?.customer?.email || buyerIdentity?.email || 'checkout-customer@example.com',
+          name: customerName,
+          email: customerEmail,
           phone: buyerIdentity?.customer?.phone || '',
           shipping_address: shippingAddress,
           customer_location: addressString,
