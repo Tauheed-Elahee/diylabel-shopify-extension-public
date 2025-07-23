@@ -13,7 +13,6 @@ import {
   useCartLines,
   useAttributes,
   useApplyAttributeChange,
-  useBuyerIdentity,
 } from "@shopify/ui-extensions-react/checkout";
 import { useState, useEffect } from "react";
 
@@ -47,7 +46,6 @@ function Extension() {
   const cartLines = useCartLines();
   const attributes = useAttributes();
   const applyAttributeChange = useApplyAttributeChange();
-  const buyerIdentity = useBuyerIdentity();
 
   // Check if DIY Label is already enabled
   const diyLabelEnabled = attributes.find(attr => attr.key === 'diy_label_enabled')?.value === 'true';
@@ -296,19 +294,9 @@ function Extension() {
       return;
     }
 
-    // Validate customer information before creating order
-    const customerName = buyerIdentity?.customer ? 
-      `${buyerIdentity.customer.firstName || ''} ${buyerIdentity.customer.lastName || ''}`.trim() : '';
-    const customerEmail = buyerIdentity?.customer?.email || buyerIdentity?.email || '';
-    
-    // Check for missing customer information
+    // Validate shipping address information before creating order
     const missingInfo = [];
-    if (!customerName || customerName.length < 2) {
-      missingInfo.push('Customer name');
-    }
-    if (!customerEmail || !customerEmail.includes('@')) {
-      missingInfo.push('Valid email address');
-    }
+    
     if (!shippingAddress?.address1) {
       missingInfo.push('Shipping address');
     }
@@ -324,7 +312,7 @@ function Extension() {
     
     if (missingInfo.length > 0) {
       const missingText = missingInfo.join(', ');
-      setError(`Missing customer information: ${missingText}. Please complete all required fields before creating your DIY Label order.`);
+      setError(`Missing shipping information: ${missingText}. Please complete all required fields before creating your DIY Label order.`);
       console.log('📦 Missing customer information:', missingInfo);
       return;
     }
@@ -361,12 +349,12 @@ function Extension() {
           item_count: cartLines.reduce((sum, line) => sum + line.quantity, 0)
         },
         customerData: {
-          name: customerName,
-          email: customerEmail,
-          phone: buyerIdentity?.customer?.phone || '',
+          name: 'Checkout Customer',
+          email: 'customer@checkout.com',
+          phone: '',
           shipping_address: shippingAddress,
           customer_location: addressString,
-          customer_id: buyerIdentity?.customer?.id || null
+          customer_id: null
         },
         options: {
           source: 'pickup_extension',
@@ -374,11 +362,7 @@ function Extension() {
           print_shop_selection: shop,
           user_agent: 'pickup-checkout-extension',
           created_at: new Date().toISOString(),
-          buyer_identity: buyerIdentity ? {
-            email: buyerIdentity.email,
-            phone: buyerIdentity.phone,
-            customer_id: buyerIdentity.customer?.id
-          } : null
+          shipping_address: shippingAddress
         }
       };
 
