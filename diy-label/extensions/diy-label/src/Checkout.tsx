@@ -12,6 +12,7 @@ import {
   useCartLines,
   useAttributes,
   useShippingAddress,
+  useBuyerIdentity,
 } from "@shopify/ui-extensions-react/checkout";
 import { useState, useEffect, useMemo } from "react";
 
@@ -42,6 +43,7 @@ function Extension() {
   const cartLines = useCartLines();
   const attributes = useAttributes();
   const shippingAddress = useShippingAddress();
+  const buyerIdentity = useBuyerIdentity();
 
   // Debug logging on component mount
   useEffect(() => {
@@ -49,6 +51,7 @@ function Extension() {
     console.log('🌱 DIY Label Extension: Cart lines:', cartLines.length);
     console.log('🌱 DIY Label Extension: Shipping address:', shippingAddress);
     console.log('🌱 DIY Label Extension: Attributes:', attributes);
+    console.log('🌱 DIY Label Extension: Buyer identity:', buyerIdentity);
   }, []);
 
   const [printShops, setPrintShops] = useState<PrintShop[]>([]);
@@ -91,6 +94,85 @@ function Extension() {
     ].filter(Boolean).join(', ');
   }, [shippingAddress]);
 
+  // Get coordinates from Shopify location data
+  const getCoordinatesFromShopifyData = async () => {
+    try {
+      // Try to get location data from Shopify's API
+      const result = await query(`
+        query {
+          locations {
+            id
+            name
+            address {
+              address1
+              city
+              provinceCode
+              countryCode
+              coordinates {
+                latitude
+                longitude
+              }
+            }
+          }
+        }
+      `);
+
+      console.log('🌱 Shopify locations query result:', result);
+
+      if (result?.data?.locations && result.data.locations.length > 0) {
+        // Find the closest location or use the first one
+        const location = result.data.locations[0];
+        if (location.address?.coordinates) {
+          return {
+            lat: location.address.coordinates.latitude,
+            lng: location.address.coordinates.longitude
+          };
+        }
+      }
+    } catch (error) {
+      console.log('🌱 Could not get Shopify location data:', error);
+    }
+
+    return null;
+  };
+
+  // Smart location detection without geocoding
+  const getCoordinatesFromAddress = () => {
+    if (!shippingAddress) return null;
+    
+    console.log('🌱 Using shipping address for coordinates:', shippingAddress);
+    
+    // Use province and city to determine coordinates
+    if (shippingAddress.provinceCode === 'QC' || shippingAddress.province === 'Quebec') {
+      if (shippingAddress.city?.toLowerCase().includes('montreal') || 
+          shippingAddress.city?.toLowerCase().includes('ville-marie')) {
+        console.log('🌱 Detected Montreal from shipping address');
+        return { lat: 45.5017, lng: -73.5673 };
+      } else if (shippingAddress.city?.toLowerCase().includes('quebec')) {
+        return { lat: 46.8139, lng: -71.208 };
+      } else {
+        // Default to Montreal for Quebec addresses
+        return { lat: 45.5017, lng: -73.5673 };
+      }
+    } else if (shippingAddress.provinceCode === 'ON' || shippingAddress.province === 'Ontario') {
+      if (shippingAddress.city?.toLowerCase().includes('toronto')) {
+        return { lat: 43.6532, lng: -79.3832 };
+      } else if (shippingAddress.city?.toLowerCase().includes('ottawa')) {
+        return { lat: 45.4215, lng: -75.6972 };
+      } else {
+        // Default to Toronto for Ontario addresses
+        return { lat: 43.6532, lng: -79.3832 };
+      }
+    } else if (shippingAddress.provinceCode === 'BC') {
+      return { lat: 49.2827, lng: -123.1207 }; // Vancouver
+    } else if (shippingAddress.provinceCode === 'AB') {
+      return { lat: 51.0447, lng: -114.0719 }; // Calgary
+    }
+    
+    // Default to Ottawa
+    return { lat: 45.4215, lng: -75.6972 };
+  };
+
   // 2. Check instructions for feature availability
   if (!instructions.attributes.canUpdateAttributes) {
     console.log('🌱 DIY Label Extension: Attribute changes not supported');
@@ -106,49 +188,6 @@ function Extension() {
     console.log('🌱 DIY Label Extension: No cart items, not showing');
     return null;
   }
-
-  // Geocode address to get coordinates
-  const geocodeAddress = async (address: any): Promise<{ lat: number; lng: number } | null> => {
-    if (!address || !address.city || !address.provinceCode) {
-      return null;
-    }
-
-    try {
-      setGeocoding(true);
-      
-      const addressQuery = [
-        address.address1,
-        address.city,
-        address.provinceCode,
-        address.countryCode,
-        address.zip
-      ].filter(Boolean).join(', ');
-
-      console.log('Geocoding address:', addressQuery);
-
-      const response = await fetch(
-        `https://diylabel.netlify.app/.netlify/functions/geocode?address=${encodeURIComponent(addressQuery)}`
-      );
-
-      if (!response.ok) {
-        throw new Error(`Geocoding failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.lat && data.lng) {
-        console.log('Geocoded successfully:', { lat: data.lat, lng: data.lng });
-        return { lat: data.lat, lng: data.lng };
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Geocoding error:', error);
-      return null;
-    } finally {
-      setGeocoding(false);
-    }
-  };
 
   // Fetch print shops based on coordinates
   const fetchPrintShops = async (lat: number, lng: number) => {
@@ -201,57 +240,21 @@ function Extension() {
         shippingAddressDetails: shippingAddress
       });
 
-      // More flexible validation - require either city OR address1
-      if (!shippingAddress || (!shippingAddress.city && !shippingAddress.address1)) {
-        // Clear print shops if no valid address
-        console.log('🌱 DIY Label Extension: No valid address, clearing print shops');
-        setPrintShops([]);
-        setSelectedPrintShop("");
-        return;
-      }
-
-      console.log('Address changed, fetching print shops for:', addressString);
-
-      // Use smart location detection instead of geocoding
-      let coordinates = null;
+      // Try to get coordinates from Shopify data first
+      let coordinates = await getCoordinatesFromShopifyData();
       
-      // Smart location detection based on province and city
-      if (shippingAddress.provinceCode === 'QC' || shippingAddress.province === 'Quebec') {
-        if (shippingAddress.city?.toLowerCase().includes('montreal') || 
-            shippingAddress.city?.toLowerCase().includes('ville-marie')) {
-          coordinates = { lat: 45.5017, lng: -73.5673 }; // Montreal
-          console.log('🌱 Detected Montreal from address');
-        } else if (shippingAddress.city?.toLowerCase().includes('quebec')) {
-          coordinates = { lat: 46.8139, lng: -71.208 }; // Quebec City
-          console.log('🌱 Detected Quebec City from address');
-        } else {
-          coordinates = { lat: 45.5017, lng: -73.5673 }; // Default to Montreal for QC
-          console.log('🌱 Using Montreal default for Quebec');
-        }
-      } else if (shippingAddress.provinceCode === 'ON' || shippingAddress.province === 'Ontario') {
-        if (shippingAddress.city?.toLowerCase().includes('toronto')) {
-          coordinates = { lat: 43.6532, lng: -79.3832 }; // Toronto
-          console.log('🌱 Detected Toronto from address');
-        } else if (shippingAddress.city?.toLowerCase().includes('ottawa')) {
-          coordinates = { lat: 45.4215, lng: -75.6972 }; // Ottawa
-          console.log('🌱 Detected Ottawa from address');
-        } else {
-          coordinates = { lat: 43.6532, lng: -79.3832 }; // Default to Toronto for ON
-          console.log('🌱 Using Toronto default for Ontario');
-        }
-      } else if (shippingAddress.provinceCode === 'BC') {
-        coordinates = { lat: 49.2827, lng: -123.1207 }; // Vancouver
-        console.log('🌱 Using Vancouver for BC');
-      } else if (shippingAddress.provinceCode === 'AB') {
-        coordinates = { lat: 51.0447, lng: -114.0719 }; // Calgary
-        console.log('🌱 Using Calgary for AB');
-      } else {
-        coordinates = { lat: 45.4215, lng: -75.6972 }; // Default Ottawa
-        console.log('🌱 Using Ottawa as default');
+      // Fallback to address-based detection
+      if (!coordinates) {
+        coordinates = getCoordinatesFromAddress();
       }
       
+      // Final fallback to Ottawa if no address data
       if (coordinates) {
+        console.log('🌱 Using coordinates:', coordinates);
         await fetchPrintShops(coordinates.lat, coordinates.lng);
+      } else {
+        console.log('🌱 No location data available, using default Ottawa');
+        await fetchPrintShops(45.4215, -75.6972);
       }
     };
 
@@ -262,7 +265,7 @@ function Extension() {
     } else {
       console.log('🌱 DIY Label Extension: DIY Label already enabled, skipping print shop loading');
     }
-  }, [addressString, diyLabelEnabled, shippingAddress?.provinceCode, shippingAddress?.city]);
+  }, [addressString, diyLabelEnabled, shippingAddress?.provinceCode, shippingAddress?.city, query]);
 
   // Handle print shop selection
   const handlePrintShopChange = async (value: string) => {

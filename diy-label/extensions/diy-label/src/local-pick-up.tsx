@@ -11,8 +11,8 @@ import {
   useAttributes,
   useApplyAttributeChange,
   useCustomer,
-  usePickupLocations,
-  usePickupLocationOptionTarget,
+  useApi,
+  useBuyerIdentity,
 } from "@shopify/ui-extensions-react/checkout";
 import { useState, useEffect } from "react";
 
@@ -34,6 +34,7 @@ interface PrintShop {
 
 function Extension() {
   const translate = useTranslate();
+  const { query } = useApi();
   const [selectedPrintShop, setSelectedPrintShop] = useState("");
   const [printShops, setPrintShops] = useState<PrintShop[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,8 +47,7 @@ function Extension() {
   const attributes = useAttributes();
   const applyAttributeChange = useApplyAttributeChange();
   const customer = useCustomer();
-  const pickupLocations = usePickupLocations();
-  const pickupLocationTarget = usePickupLocationOptionTarget();
+  const buyerIdentity = useBuyerIdentity();
 
   // Check if DIY Label is already enabled
   const diyLabelEnabled = attributes.find(attr => attr.key === 'diy_label_enabled')?.value === 'true';
@@ -60,52 +60,58 @@ function Extension() {
       shippingAddress: !!shippingAddress,
       diyLabelEnabled,
       existingPrintShop,
-      pickupLocations: pickupLocations.length,
-      pickupLocationTarget: pickupLocationTarget?.handle
+      buyerIdentity: !!buyerIdentity
     });
   }, []);
 
-  // Use Shopify's pickup locations to get coordinates
-  const getCoordinatesFromPickupLocations = () => {
-    console.log('📦 Available pickup locations:', pickupLocations);
-    
-    // Find the closest pickup location or use the first one
-    if (pickupLocations.length > 0) {
-      const location = pickupLocations[0]; // Use first location for now
-      console.log('📦 Using pickup location:', location);
-      
-      // Extract coordinates from the location
-      // Note: Shopify pickup locations might not have direct lat/lng
-      // We'll need to geocode the address or use a mapping
-      
-      // For Montreal area, use Montreal coordinates
-      if (location.address?.city?.toLowerCase().includes('montreal') || 
-          location.address?.city?.toLowerCase().includes('ville-marie')) {
-        return { lat: 45.5017, lng: -73.5673 };
+  // Get coordinates from Shopify data
+  const getCoordinatesFromShopifyData = async () => {
+    try {
+      // Try to get location data from Shopify's pickup locations via GraphQL
+      const result = await query(`
+        query {
+          locations {
+            id
+            name
+            address {
+              address1
+              city
+              provinceCode
+              countryCode
+              zip
+              coordinates {
+                latitude
+                longitude
+              }
+            }
+          }
+        }
+      `);
+
+      console.log('📦 Shopify locations query result:', result);
+
+      if (result?.data?.locations && result.data.locations.length > 0) {
+        // Use the first location's coordinates if available
+        const location = result.data.locations[0];
+        if (location.address?.coordinates) {
+          return {
+            lat: location.address.coordinates.latitude,
+            lng: location.address.coordinates.longitude
+          };
+        }
       }
-      
-      // For Ottawa area
-      if (location.address?.city?.toLowerCase().includes('ottawa')) {
-        return { lat: 45.4215, lng: -75.6972 };
-      }
-      
-      // For Toronto area
-      if (location.address?.city?.toLowerCase().includes('toronto')) {
-        return { lat: 43.6532, lng: -79.3832 };
-      }
-      
-      // Default to Ottawa if we can't determine
-      return { lat: 45.4215, lng: -75.6972 };
+    } catch (error) {
+      console.log('📦 Could not get Shopify location data:', error);
     }
-    
+
     return null;
   };
 
-  // Use shipping address as fallback
-  const getCoordinatesFromShippingAddress = () => {
+  // Smart location detection based on address
+  const getCoordinatesFromAddress = () => {
     if (!shippingAddress) return null;
     
-    console.log('📦 Using shipping address:', shippingAddress);
+    console.log('📦 Using shipping address for coordinates:', shippingAddress);
     
     // Use province and city to determine coordinates
     if (shippingAddress.provinceCode === 'QC' || shippingAddress.province === 'Quebec') {
@@ -115,12 +121,18 @@ function Extension() {
         return { lat: 45.5017, lng: -73.5673 };
       } else if (shippingAddress.city?.toLowerCase().includes('quebec')) {
         return { lat: 46.8139, lng: -71.208 };
+      } else {
+        // Default to Montreal for Quebec addresses
+        return { lat: 45.5017, lng: -73.5673 };
       }
     } else if (shippingAddress.provinceCode === 'ON' || shippingAddress.province === 'Ontario') {
       if (shippingAddress.city?.toLowerCase().includes('toronto')) {
         return { lat: 43.6532, lng: -79.3832 };
       } else if (shippingAddress.city?.toLowerCase().includes('ottawa')) {
         return { lat: 45.4215, lng: -75.6972 };
+      } else {
+        // Default to Toronto for Ontario addresses
+        return { lat: 43.6532, lng: -79.3832 };
       }
     } else if (shippingAddress.provinceCode === 'BC') {
       return { lat: 49.2827, lng: -123.1207 }; // Vancouver
@@ -182,12 +194,12 @@ function Extension() {
         return;
       }
       
-      // Try to get coordinates from Shopify pickup locations first
-      let coordinates = getCoordinatesFromPickupLocations();
+      // Try to get coordinates from Shopify data first
+      let coordinates = await getCoordinatesFromShopifyData();
       
-      // Fallback to shipping address
+      // Fallback to shipping address detection
       if (!coordinates) {
-        coordinates = getCoordinatesFromShippingAddress();
+        coordinates = getCoordinatesFromAddress();
       }
       
       if (coordinates) {
@@ -200,7 +212,7 @@ function Extension() {
     };
 
     loadPrintShops();
-  }, [pickupLocations, shippingAddress, diyLabelEnabled, cartLines.length]);
+  }, [shippingAddress, diyLabelEnabled, cartLines.length]);
 
   // Update cart attributes when print shop selection changes
   const handlePrintShopChange = async (value: string) => {
@@ -252,8 +264,7 @@ function Extension() {
       // Store location info
       const locationInfo = {
         address: shippingAddress ? `${shippingAddress.address1}, ${shippingAddress.city}, ${shippingAddress.provinceCode}` : '',
-        coordinates: { lat: shop.lat, lng: shop.lng },
-        pickupLocation: pickupLocations[0]?.address || null
+        coordinates: { lat: shop.lat, lng: shop.lng }
       };
 
       await applyAttributeChange({
@@ -309,8 +320,7 @@ function Extension() {
           shipping_address: shippingAddress
         },
         options: {
-          source: 'pickup_extension',
-          pickupLocation: pickupLocations[0] || null
+          source: 'pickup_extension'
         }
       };
 
@@ -353,7 +363,7 @@ function Extension() {
     }))
   ];
 
-  // Only show if we have cart items and pickup locations are available
+  // Only show if we have cart items
   if (cartLines.length === 0) {
     console.log('📦 No cart items, not showing pickup extension');
     return null;
