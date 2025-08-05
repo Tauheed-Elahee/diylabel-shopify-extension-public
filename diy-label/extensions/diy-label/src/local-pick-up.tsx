@@ -11,8 +11,7 @@ import {
   useAttributes,
   useApplyAttributeChange,
   useCustomer,
-  useApi,
-  useBuyerIdentity,
+  useApi
 } from "@shopify/ui-extensions-react/checkout";
 import { useState, useEffect } from "react";
 
@@ -47,7 +46,6 @@ function Extension() {
   const attributes = useAttributes();
   const applyAttributeChange = useApplyAttributeChange();
   const customer = useCustomer();
-  const buyerIdentity = useBuyerIdentity();
 
   // Check if DIY Label is already enabled
   const diyLabelEnabled = attributes.find(attr => attr.key === 'diy_label_enabled')?.value === 'true';
@@ -59,8 +57,7 @@ function Extension() {
       cartLines: cartLines.length,
       shippingAddress: !!shippingAddress,
       diyLabelEnabled,
-      existingPrintShop,
-      buyerIdentity: !!buyerIdentity
+      existingPrintShop
     });
   }, []);
 

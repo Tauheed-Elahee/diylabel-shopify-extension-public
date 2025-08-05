@@ -12,7 +12,6 @@ import {
   useCartLines,
   useAttributes,
   useShippingAddress,
-  useBuyerIdentity,
 } from "@shopify/ui-extensions-react/checkout";
 import { useState, useEffect, useMemo } from "react";
 
@@ -43,7 +42,6 @@ function Extension() {
   const cartLines = useCartLines();
   const attributes = useAttributes();
   const shippingAddress = useShippingAddress();
-  const buyerIdentity = useBuyerIdentity();
 
   // Debug logging on component mount
   useEffect(() => {
@@ -51,7 +49,6 @@ function Extension() {
     console.log('🌱 DIY Label Extension: Cart lines:', cartLines.length);
     console.log('🌱 DIY Label Extension: Shipping address:', shippingAddress);
     console.log('🌱 DIY Label Extension: Attributes:', attributes);
-    console.log('🌱 DIY Label Extension: Buyer identity:', buyerIdentity);
   }, []);
 
   const [printShops, setPrintShops] = useState<PrintShop[]>([]);
