@@ -9,11 +9,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
     'Access-Control-Max-Age': '86400',
   };
   
+  console.log('Geocode API called:', { address, method: request.method });
+  
   if (!address) {
+    console.log('Missing address parameter');
     return json({ error: 'Address is required' }, { 
       status: 400,
       headers: corsHeaders
@@ -34,15 +37,21 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       });
     }
     
-    const geocodingUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${mapboxToken}&limit=1`;
+    // Add country restriction for better Canadian address results
+    const geocodingUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(address)}.json?access_token=${mapboxToken}&limit=1&country=CA`;
+    
+    console.log('Calling Mapbox API for address:', address);
     
     const geocodingResponse = await fetch(geocodingUrl);
     
     if (!geocodingResponse.ok) {
-      throw new Error(`Mapbox API error: ${geocodingResponse.status}`);
+      const errorText = await geocodingResponse.text();
+      console.error('Mapbox API error:', geocodingResponse.status, errorText);
+      throw new Error(`Mapbox API error: ${geocodingResponse.status} - ${errorText}`);
     }
     
     const data = await geocodingResponse.json();
+    console.log('Mapbox response:', data);
     
     if (data.features && data.features.length > 0) {
       const [lng, lat] = data.features[0].center;
@@ -52,7 +61,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
       return json({ 
         lat, 
         lng,
-        address: data.features[0].place_name 
+        address: data.features[0].place_name,
+        success: true,
+        source: 'mapbox'
       }, {
         headers: corsHeaders
       });
@@ -79,12 +90,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 // Handle OPTIONS preflight requests
 export const action = async ({ request }: LoaderFunctionArgs) => {
   if (request.method === 'OPTIONS') {
+    console.log('Handling OPTIONS preflight for geocode API');
     return new Response(null, {
       status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
         'Access-Control-Max-Age': '86400',
       }
     });
