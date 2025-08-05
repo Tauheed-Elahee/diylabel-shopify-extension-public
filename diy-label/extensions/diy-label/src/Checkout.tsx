@@ -94,7 +94,7 @@ function Extension() {
   // Get coordinates from Shopify location data
   const getCoordinatesFromShopifyData = async () => {
     try {
-      // Try to get location data from Shopify's API
+      // Get Shopify's pickup locations which are already sorted by distance
       const result = await query(`
         query {
           locations {
@@ -102,9 +102,11 @@ function Extension() {
             name
             address {
               address1
+              address2
               city
               provinceCode
               countryCode
+              zip
               coordinates {
                 latitude
                 longitude
@@ -117,9 +119,12 @@ function Extension() {
       console.log('🌱 Shopify locations query result:', result);
 
       if (result?.data?.locations && result.data.locations.length > 0) {
-        // Find the closest location or use the first one
+        // Shopify returns locations sorted by distance - use the closest one
         const location = result.data.locations[0];
+        console.log('🌱 Using closest Shopify location:', location);
+        
         if (location.address?.coordinates) {
+          console.log('🌱 Found Shopify coordinates:', location.address.coordinates);
           return {
             lat: location.address.coordinates.latitude,
             lng: location.address.coordinates.longitude
@@ -133,40 +138,52 @@ function Extension() {
     return null;
   };
 
-  // Smart location detection without geocoding
+  // Fallback location detection from shipping address
   const getCoordinatesFromAddress = () => {
     if (!shippingAddress) return null;
     
-    console.log('🌱 Using shipping address for coordinates:', shippingAddress);
+    console.log('🌱 Fallback: Using shipping address for coordinates:', shippingAddress);
     
-    // Use province and city to determine coordinates
-    if (shippingAddress.provinceCode === 'QC' || shippingAddress.province === 'Quebec') {
-      if (shippingAddress.city?.toLowerCase().includes('montreal') || 
-          shippingAddress.city?.toLowerCase().includes('ville-marie')) {
-        console.log('🌱 Detected Montreal from shipping address');
-        return { lat: 45.5017, lng: -73.5673 };
-      } else if (shippingAddress.city?.toLowerCase().includes('quebec')) {
-        return { lat: 46.8139, lng: -71.208 };
-      } else {
-        // Default to Montreal for Quebec addresses
-        return { lat: 45.5017, lng: -73.5673 };
-      }
-    } else if (shippingAddress.provinceCode === 'ON' || shippingAddress.province === 'Ontario') {
-      if (shippingAddress.city?.toLowerCase().includes('toronto')) {
-        return { lat: 43.6532, lng: -79.3832 };
-      } else if (shippingAddress.city?.toLowerCase().includes('ottawa')) {
+    // Try city detection first, then province fallback
+    if (shippingAddress.city) {
+      const city = shippingAddress.city.toLowerCase();
+      
+      // Specific city detection
+      if (city.includes('ottawa')) {
+        console.log('🌱 Detected Ottawa from shipping city');
         return { lat: 45.4215, lng: -75.6972 };
-      } else {
-        // Default to Toronto for Ontario addresses
+      } else if (city.includes('montreal') || city.includes('ville-marie')) {
+        console.log('🌱 Detected Montreal from shipping city');
+        return { lat: 45.5017, lng: -73.5673 };
+      } else if (city.includes('toronto')) {
+        console.log('🌱 Detected Toronto from shipping city');
         return { lat: 43.6532, lng: -79.3832 };
+      } else if (city.includes('vancouver')) {
+        console.log('🌱 Detected Vancouver from shipping city');
+        return { lat: 49.2827, lng: -123.1207 };
+      } else if (city.includes('calgary')) {
+        console.log('🌱 Detected Calgary from shipping city');
+        return { lat: 51.0447, lng: -114.0719 };
       }
+    }
+    
+    // Province fallback - changed Ontario default to Ottawa
+    if (shippingAddress.provinceCode === 'QC' || shippingAddress.province === 'Quebec') {
+      console.log('🌱 Province fallback: Quebec → Montreal');
+      return { lat: 45.5017, lng: -73.5673 };
+    } else if (shippingAddress.provinceCode === 'ON' || shippingAddress.province === 'Ontario') {
+      console.log('🌱 Province fallback: Ontario → Ottawa (most central)');
+      return { lat: 45.4215, lng: -75.6972 }; // Changed default to Ottawa instead of Toronto
     } else if (shippingAddress.provinceCode === 'BC') {
+      console.log('🌱 Province fallback: BC → Vancouver');
       return { lat: 49.2827, lng: -123.1207 }; // Vancouver
     } else if (shippingAddress.provinceCode === 'AB') {
+      console.log('🌱 Province fallback: AB → Calgary');
       return { lat: 51.0447, lng: -114.0719 }; // Calgary
     }
     
-    // Default to Ottawa
+    // Final fallback to Ottawa
+    console.log('🌱 Final fallback: Ottawa');
     return { lat: 45.4215, lng: -75.6972 };
   };
 
@@ -237,27 +254,27 @@ function Extension() {
         shippingAddressDetails: shippingAddress
       });
 
-      // Try to get coordinates from Shopify data first
+      // PRIORITY 1: Use Shopify's pickup location data (most accurate)
       let coordinates = await getCoordinatesFromShopifyData();
       
-      // Fallback to address-based detection
+      // PRIORITY 2: Fallback to shipping address detection
       if (!coordinates) {
+        console.log('🌱 No Shopify location coordinates, using shipping address fallback');
         coordinates = getCoordinatesFromAddress();
       }
       
-      // Final fallback to Ottawa if no address data
       if (coordinates) {
-        console.log('🌱 Using coordinates:', coordinates);
+        console.log('🌱 Final coordinates for print shop search:', coordinates);
         await fetchPrintShops(coordinates.lat, coordinates.lng);
       } else {
-        console.log('🌱 No location data available, using default Ottawa');
+        console.log('🌱 No location data available, using emergency Ottawa fallback');
         await fetchPrintShops(45.4215, -75.6972);
       }
     };
 
     // Only load print shops if DIY Label is not already enabled
     if (!diyLabelEnabled) {
-      console.log('🌱 DIY Label Extension: DIY Label not enabled, loading print shops');
+      console.log('🌱 DIY Label Extension: Loading print shops (DIY Label not yet enabled)');
       loadPrintShopsForAddress();
     } else {
       console.log('🌱 DIY Label Extension: DIY Label already enabled, skipping print shop loading');
