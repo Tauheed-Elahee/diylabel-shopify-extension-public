@@ -38,7 +38,7 @@ function Extension() {
   const [printShops, setPrintShops] = useState<PrintShop[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [orderCreating, setOrderCreating] = useState(false);
+  const [orderCreated, setOrderCreated] = useState(false);
 
   // Get Shopify data
   const shippingAddress = useShippingAddress();
@@ -49,7 +49,8 @@ function Extension() {
 
   // Check if DIY Label is already enabled
   const diyLabelEnabled = attributes.find(attr => attr.key === 'diy_label_enabled')?.value === 'true';
-  const existingPrintShop = attributes.find(attr => attr.key === 'diy_label_print_shop_name')?.value;
+  const existingPrintShopName = attributes.find(attr => attr.key === 'diy_label_print_shop_name')?.value;
+  const existingPrintShopAddress = attributes.find(attr => attr.key === 'diy_label_print_shop_address')?.value;
 
   // Debug logging
   useEffect(() => {
@@ -57,14 +58,13 @@ function Extension() {
       cartLines: cartLines.length,
       shippingAddress: !!shippingAddress,
       diyLabelEnabled,
-      existingPrintShop
+      existingPrintShopName
     });
   }, []);
 
   // Get coordinates from Shopify data
   const getCoordinatesFromShopifyData = async () => {
     try {
-      // Get Shopify's pickup locations which already have coordinates
       const result = await query(`
         query {
           locations {
@@ -76,7 +76,6 @@ function Extension() {
               city
               provinceCode
               countryCode
-              zip
               zip
               coordinates {
                 latitude
@@ -90,8 +89,6 @@ function Extension() {
       console.log('📦 Shopify locations query result:', result);
 
       if (result?.data?.locations && result.data.locations.length > 0) {
-        // Find the location that matches the current area
-        // Shopify orders locations by distance, so the first one is closest
         const location = result.data.locations[0];
         console.log('📦 Using Shopify location:', location);
         
@@ -121,7 +118,7 @@ function Extension() {
       const city = shippingAddress.city.toLowerCase();
       
       // Specific city detection
-      if (city.includes('ottawa')) {
+      if (city.includes('ottawa') || city.includes('downtown')) {
         console.log('📦 Detected Ottawa from shipping city');
         return { lat: 45.4215, lng: -75.6972 };
       } else if (city.includes('montreal') || city.includes('ville-marie')) {
@@ -139,19 +136,19 @@ function Extension() {
       }
     }
     
-    // Province fallback only if city detection fails
+    // Province fallback
     if (shippingAddress.provinceCode === 'QC' || shippingAddress.province === 'Quebec') {
       console.log('📦 Province fallback: Quebec → Montreal');
       return { lat: 45.5017, lng: -73.5673 };
     } else if (shippingAddress.provinceCode === 'ON' || shippingAddress.province === 'Ontario') {
-      console.log('📦 Province fallback: Ontario → Ottawa (most central)');
-      return { lat: 45.4215, lng: -75.6972 }; // Changed default to Ottawa instead of Toronto
+      console.log('📦 Province fallback: Ontario → Ottawa');
+      return { lat: 45.4215, lng: -75.6972 };
     } else if (shippingAddress.provinceCode === 'BC') {
       console.log('📦 Province fallback: BC → Vancouver');
-      return { lat: 49.2827, lng: -123.1207 }; // Vancouver
+      return { lat: 49.2827, lng: -123.1207 };
     } else if (shippingAddress.provinceCode === 'AB') {
       console.log('📦 Province fallback: AB → Calgary');
-      return { lat: 51.0447, lng: -114.0719 }; // Calgary
+      return { lat: 51.0447, lng: -114.0719 };
     }
     
     // Final fallback to Ottawa
@@ -244,6 +241,7 @@ function Extension() {
           type: "updateAttribute",
           value: "false",
         });
+        setOrderCreated(false);
         return;
       }
 
@@ -299,7 +297,10 @@ function Extension() {
 
   // Create DIY Label order
   const createDIYLabelOrder = async () => {
-    if (!selectedPrintShop || orderCreating) return;
+    if (!selectedPrintShop) {
+      setError('Please select a print shop first');
+      return;
+    }
 
     const shop = printShops.find(s => s.id.toString() === selectedPrintShop);
     if (!shop) {
@@ -308,7 +309,6 @@ function Extension() {
     }
 
     try {
-      setOrderCreating(true);
       setError('');
       
       const shopDomain = 'diy-label.myshopify.com';
@@ -357,7 +357,8 @@ function Extension() {
       const result = await response.json();
       
       if (result.success) {
-        setError('✅ Order created successfully!');
+        setOrderCreated(true);
+        console.log('📦 Order created successfully!');
       } else {
         throw new Error(result.error || 'Order creation failed');
       }
@@ -365,8 +366,47 @@ function Extension() {
     } catch (error) {
       console.error('📦 Error creating DIY Label order:', error);
       setError(`Failed to create order: ${error.message}`);
-    } finally {
-      setOrderCreating(false);
+    }
+  };
+
+  // Handle removal of DIY Label
+  const handleRemoveDIYLabel = async () => {
+    try {
+      await applyAttributeChange({
+        key: "diy_label_enabled",
+        type: "updateAttribute",
+        value: "false",
+      });
+
+      // Clear other DIY Label attributes
+      await applyAttributeChange({
+        key: "diy_label_print_shop_id",
+        type: "updateAttribute",
+        value: "",
+      });
+
+      await applyAttributeChange({
+        key: "diy_label_print_shop_name",
+        type: "updateAttribute",
+        value: "",
+      });
+
+      await applyAttributeChange({
+        key: "diy_label_print_shop_address",
+        type: "updateAttribute",
+        value: "",
+      });
+
+      await applyAttributeChange({
+        key: "diy_label_customer_location",
+        type: "updateAttribute",
+        value: "",
+      });
+
+      setSelectedPrintShop("");
+      setOrderCreated(false);
+    } catch (error) {
+      setError('Failed to remove local printing option');
     }
   };
 
@@ -385,18 +425,50 @@ function Extension() {
     return null;
   }
 
-  // Show if DIY Label is already enabled
-  if (diyLabelEnabled && existingPrintShop) {
+  // If already enabled and order created, show success state
+  if (diyLabelEnabled && existingPrintShopName && (orderCreated || selectedPrintShop)) {
     return (
       <BlockStack spacing="base">
         <Banner status="success">
           <BlockStack spacing="tight">
             <Text emphasis="bold">🌱 Local Printing Selected</Text>
             <Text>
-              Your order will be printed at {existingPrintShop} and ready for pickup.
+              Your order will be printed at {existingPrintShopName} and ready for pickup. 
+              This reduces shipping impact and supports your local community.
             </Text>
           </BlockStack>
         </Banner>
+        
+        {existingPrintShopAddress && (
+          <Banner status="info">
+            <BlockStack spacing="tight">
+              <Text emphasis="bold">{existingPrintShopName}</Text>
+              <Text>{existingPrintShopAddress}</Text>
+              {(() => {
+                const shop = printShops.find(s => s.name === existingPrintShopName);
+                if (shop) {
+                  return (
+                    <>
+                      <Text>Specialty: {shop.specialty}</Text>
+                      <Text>Rating: ⭐ {shop.rating}/5</Text>
+                      {shop.distance_km && (
+                        <Text>Distance: {shop.distance_km.toFixed(1)} km</Text>
+                      )}
+                    </>
+                  );
+                }
+                return null;
+              })()}
+            </BlockStack>
+          </Banner>
+        )}
+        
+        <Button
+          kind="secondary"
+          onPress={handleRemoveDIYLabel}
+        >
+          Remove Local Printing
+        </Button>
       </BlockStack>
     );
   }
@@ -413,7 +485,7 @@ function Extension() {
       </Banner>
 
       {error && (
-        <Banner status={error.includes('✅') ? "success" : "critical"}>
+        <Banner status="critical">
           <Text>{error}</Text>
         </Banner>
       )}
@@ -441,7 +513,7 @@ function Extension() {
 
                 return (
                   <>
-                    <Banner status="success">
+                    <Banner status="info">
                       <BlockStack spacing="tight">
                         <Text emphasis="bold">{shop.name}</Text>
                         <Text>{shop.address}</Text>
@@ -456,9 +528,8 @@ function Extension() {
                     <Button
                       kind="primary"
                       onPress={createDIYLabelOrder}
-                      loading={orderCreating}
                     >
-                      {orderCreating ? 'Creating Order...' : 'Confirm Local Printing'}
+                      Create DIY Label Order
                     </Button>
                   </>
                 );

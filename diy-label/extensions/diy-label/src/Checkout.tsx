@@ -54,13 +54,13 @@ function Extension() {
   const [printShops, setPrintShops] = useState<PrintShop[]>([]);
   const [selectedPrintShop, setSelectedPrintShop] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [geocoding, setGeocoding] = useState(false);
   const [error, setError] = useState<string>("");
-  const [orderCreating, setOrderCreating] = useState(false);
+  const [orderCreated, setOrderCreated] = useState(false);
 
   // Check if DIY Label is already enabled
   const diyLabelEnabled = attributes.find(attr => attr.key === 'diy_label_enabled')?.value === 'true';
-  const existingPrintShop = attributes.find(attr => attr.key === 'diy_label_print_shop_name')?.value;
+  const existingPrintShopName = attributes.find(attr => attr.key === 'diy_label_print_shop_name')?.value;
+  const existingPrintShopAddress = attributes.find(attr => attr.key === 'diy_label_print_shop_address')?.value;
 
   // Check if cart has items (function only works with products in cart)
   const hasCartItems = cartLines.length > 0;
@@ -69,14 +69,14 @@ function Extension() {
   useEffect(() => {
     console.log('🌱 DIY Label Extension: State update', {
       diyLabelEnabled,
-      existingPrintShop,
+      existingPrintShopName,
       hasCartItems,
       printShopsCount: printShops.length,
       selectedPrintShop,
       loading,
       error
     });
-  }, [diyLabelEnabled, existingPrintShop, hasCartItems, printShops.length, selectedPrintShop, loading, error]);
+  }, [diyLabelEnabled, existingPrintShopName, hasCartItems, printShops.length, selectedPrintShop, loading, error]);
 
   // Create a stable address string for comparison
   const addressString = useMemo(() => {
@@ -91,65 +91,18 @@ function Extension() {
     ].filter(Boolean).join(', ');
   }, [shippingAddress]);
 
-  // Get coordinates from Shopify location data
-  const getCoordinatesFromShopifyData = async () => {
-    try {
-      // Get Shopify's pickup locations which are already sorted by distance
-      const result = await query(`
-        query {
-          locations {
-            id
-            name
-            address {
-              address1
-              address2
-              city
-              provinceCode
-              countryCode
-              zip
-              coordinates {
-                latitude
-                longitude
-              }
-            }
-          }
-        }
-      `);
-
-      console.log('🌱 Shopify locations query result:', result);
-
-      if (result?.data?.locations && result.data.locations.length > 0) {
-        // Shopify returns locations sorted by distance - use the closest one
-        const location = result.data.locations[0];
-        console.log('🌱 Using closest Shopify location:', location);
-        
-        if (location.address?.coordinates) {
-          console.log('🌱 Found Shopify coordinates:', location.address.coordinates);
-          return {
-            lat: location.address.coordinates.latitude,
-            lng: location.address.coordinates.longitude
-          };
-        }
-      }
-    } catch (error) {
-      console.log('🌱 Could not get Shopify location data:', error);
-    }
-
-    return null;
-  };
-
-  // Fallback location detection from shipping address
+  // Get coordinates from address detection
   const getCoordinatesFromAddress = () => {
     if (!shippingAddress) return null;
     
-    console.log('🌱 Fallback: Using shipping address for coordinates:', shippingAddress);
+    console.log('🌱 Getting coordinates from address:', shippingAddress);
     
-    // Try city detection first, then province fallback
+    // Use shipping address city first, then province fallback
     if (shippingAddress.city) {
       const city = shippingAddress.city.toLowerCase();
       
       // Specific city detection
-      if (city.includes('ottawa')) {
+      if (city.includes('ottawa') || city.includes('downtown')) {
         console.log('🌱 Detected Ottawa from shipping city');
         return { lat: 45.4215, lng: -75.6972 };
       } else if (city.includes('montreal') || city.includes('ville-marie')) {
@@ -167,19 +120,19 @@ function Extension() {
       }
     }
     
-    // Province fallback - changed Ontario default to Ottawa
+    // Province fallback
     if (shippingAddress.provinceCode === 'QC' || shippingAddress.province === 'Quebec') {
       console.log('🌱 Province fallback: Quebec → Montreal');
       return { lat: 45.5017, lng: -73.5673 };
     } else if (shippingAddress.provinceCode === 'ON' || shippingAddress.province === 'Ontario') {
-      console.log('🌱 Province fallback: Ontario → Ottawa (most central)');
-      return { lat: 45.4215, lng: -75.6972 }; // Changed default to Ottawa instead of Toronto
+      console.log('🌱 Province fallback: Ontario → Ottawa');
+      return { lat: 45.4215, lng: -75.6972 };
     } else if (shippingAddress.provinceCode === 'BC') {
       console.log('🌱 Province fallback: BC → Vancouver');
-      return { lat: 49.2827, lng: -123.1207 }; // Vancouver
+      return { lat: 49.2827, lng: -123.1207 };
     } else if (shippingAddress.provinceCode === 'AB') {
       console.log('🌱 Province fallback: AB → Calgary');
-      return { lat: 51.0447, lng: -114.0719 }; // Calgary
+      return { lat: 51.0447, lng: -114.0719 };
     }
     
     // Final fallback to Ottawa
@@ -228,15 +181,7 @@ function Extension() {
     } catch (err) {
       console.error('Error fetching print shops:', err);
       setError('Failed to load print shops. Please try again.');
-      
-      // Fallback to mock data for development
-      const fallbackShops = [
-        { id: 10, name: "Capital Print Co.", address: "123 Bank St, Ottawa, ON", specialty: "Government Printing", rating: 4.8, distance_km: 2.1 },
-        { id: 11, name: "ByWard Print Solutions", address: "456 Somerset St, Ottawa, ON", specialty: "Custom Designs", rating: 4.9, distance_km: 3.2 },
-        { id: 12, name: "Rideau Print Centre", address: "321 Rideau St, Ottawa, ON", specialty: "Quick Service", rating: 4.5, distance_km: 1.8 }
-      ];
-      setPrintShops(fallbackShops);
-      setSelectedPrintShop("");
+      setPrintShops([]);
     } finally {
       setLoading(false);
     }
@@ -254,14 +199,8 @@ function Extension() {
         shippingAddressDetails: shippingAddress
       });
 
-      // PRIORITY 1: Use Shopify's pickup location data (most accurate)
-      let coordinates = await getCoordinatesFromShopifyData();
-      
-      // PRIORITY 2: Fallback to shipping address detection
-      if (!coordinates) {
-        console.log('🌱 No Shopify location coordinates, using shipping address fallback');
-        coordinates = getCoordinatesFromAddress();
-      }
+      // Get coordinates from address detection
+      const coordinates = getCoordinatesFromAddress();
       
       if (coordinates) {
         console.log('🌱 Final coordinates for print shop search:', coordinates);
@@ -279,7 +218,7 @@ function Extension() {
     } else {
       console.log('🌱 DIY Label Extension: DIY Label already enabled, skipping print shop loading');
     }
-  }, [addressString, diyLabelEnabled, shippingAddress?.provinceCode, shippingAddress?.city, query]);
+  }, [addressString, diyLabelEnabled, shippingAddress?.provinceCode, shippingAddress?.city]);
 
   // Handle print shop selection
   const handlePrintShopChange = async (value: string) => {
@@ -325,7 +264,7 @@ function Extension() {
           type: "updateAttribute",
           value: JSON.stringify({
             address: addressString,
-            coordinates: { lat: shop.lat, lng: shop.lng } // Use shop coordinates as approximation
+            coordinates: { lat: shop.lat, lng: shop.lng }
           }),
         });
       }
@@ -335,6 +274,79 @@ function Extension() {
     } catch (error) {
       console.error('🌱 DIY Label Extension: Error setting cart attributes:', error);
       setError('Failed to select print shop. Please try again.');
+    }
+  };
+
+  // Create DIY Label order
+  const createDIYLabelOrder = async () => {
+    if (!selectedPrintShop) {
+      setError('Please select a print shop first');
+      return;
+    }
+
+    const shop = printShops.find(s => s.id.toString() === selectedPrintShop);
+    if (!shop) {
+      setError('Selected print shop not found');
+      return;
+    }
+
+    try {
+      setError('');
+      console.log('Creating DIY Label order for shop:', shop);
+
+      const shopDomain = 'diy-label.myshopify.com';
+      
+      const orderData = {
+        shopifyOrderId: `checkout-${Date.now()}`,
+        shopDomain: shopDomain,
+        printShopId: shop.id,
+        productData: {
+          line_items: cartLines.map(line => ({
+            id: line.id,
+            quantity: line.quantity,
+            title: line.merchandise.title || 'Unknown Product',
+            variant_id: line.merchandise.id
+          })),
+          total: cartLines.reduce((sum, line) => sum + (line.cost?.totalAmount?.amount || 0), 0),
+          currency: cartLines[0]?.cost?.totalAmount?.currencyCode || 'USD'
+        },
+        customerData: {
+          name: 'Checkout Extension Customer',
+          email: 'checkout-extension@example.com',
+          shipping_address: shippingAddress,
+          customer_location: addressString
+        },
+        options: {
+          source: 'checkout_extension'
+        }
+      };
+
+      const response = await fetch('https://diylabel.netlify.app/.netlify/functions/checkout-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(orderData)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setOrderCreated(true);
+        console.log('🌱 Order created successfully!');
+      } else {
+        throw new Error(result.error || 'Order creation failed');
+      }
+
+    } catch (error) {
+      console.error('🌱 Error creating DIY Label order:', error);
+      setError(`Failed to create order: ${error.message}`);
     }
   };
 
@@ -373,164 +385,11 @@ function Extension() {
       });
 
       setSelectedPrintShop("");
+      setOrderCreated(false);
     } catch (error) {
       setError('Failed to remove local printing option');
     }
   };
-
-  // Create order in Supabase when checkout is completed
-  const createDIYLabelOrder = async () => {
-    console.log('🌱 DIY Label Extension: createDIYLabelOrder called', {
-      selectedPrintShop,
-      orderCreating,
-      printShopsLength: printShops.length
-    });
-
-    if (!selectedPrintShop || orderCreating) {
-      console.log('Cannot create order:', { selectedPrintShop: !!selectedPrintShop, orderCreating });
-      return;
-    }
-
-    const shop = printShops.find(s => s.id.toString() === selectedPrintShop);
-    if (!shop) {
-      console.error('Selected print shop not found:', selectedPrintShop);
-      setError('Selected print shop not found');
-      return;
-    }
-
-    try {
-      setOrderCreating(true);
-      setError(''); // Clear any previous errors
-      console.log('Creating DIY Label order for shop:', shop);
-
-      // Extract shop domain from current URL or use default
-      const currentUrl = window.location?.hostname || 'diy-label.myshopify.com';
-      const shopDomain = currentUrl.includes('.myshopify.com') ? currentUrl : 'diy-label.myshopify.com';
-      console.log('🌱 DIY Label Extension: Using shop domain:', shopDomain);
-
-      // Prepare order data
-      const orderData = {
-        shopifyOrderId: `checkout-${Date.now()}`, // Temporary ID, will be updated by webhook
-        shopDomain: shopDomain,
-        printShopId: shop.id,
-        productData: {
-          line_items: cartLines.map(line => ({
-            id: line.id,
-            quantity: line.quantity,
-            title: line.merchandise.__typename === 'ProductVariant' ? 
-                   line.merchandise.product?.title || 'Unknown Product' : 'Unknown Product',
-            variant_id: line.merchandise.id
-          })),
-          total: cartLines.reduce((sum, line) => sum + (line.cost?.totalAmount?.amount || 0), 0),
-          currency: cartLines[0]?.cost?.totalAmount?.currencyCode || 'USD'
-        },
-        customerData: {
-          name: 'Checkout Extension Customer',
-          email: 'checkout-extension@example.com',
-          shipping_address: shippingAddress,
-          customer_location: addressString
-        },
-        options: {
-          source: 'checkout_extension',
-          extension_version: '1.0',
-          print_shop_selection: shop,
-          user_agent: navigator.userAgent,
-          created_at: new Date().toISOString()
-        }
-      };
-
-      console.log('Sending order data:', orderData);
-
-      // Try multiple API endpoints for reliability
-      const apiEndpoints = [
-        'https://diylabel.netlify.app/.netlify/functions/checkout-order',
-        'https://diylabel.netlify.app/api/checkout/diy-label'
-      ];
-      
-      let response = null;
-      let lastError = null;
-      
-      for (const endpoint of apiEndpoints) {
-        try {
-          console.log('Trying endpoint:', endpoint);
-          response = await fetch(endpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify(orderData)
-          });
-          
-          console.log('Response from', endpoint, ':', response.status, response.statusText);
-          
-          if (response.ok) {
-            break; // Success, exit loop
-          } else {
-            const errorText = await response.text();
-            console.error('API error from', endpoint, ':', errorText);
-            lastError = new Error(`HTTP ${response.status}: ${errorText}`);
-          }
-        } catch (fetchError) {
-          console.error('Fetch error for', endpoint, ':', fetchError);
-          lastError = fetchError;
-          response = null;
-        }
-      }
-      
-      if (!response || !response.ok) {
-        throw lastError || new Error('All API endpoints failed');
-      }
-      
-      const result = await response.json();
-      console.log('DIY Label order created successfully:', result);
-      
-      if (result.success) {
-        // Show success message
-        setError(''); // Clear any previous errors
-        
-        // Update the UI to show success
-        const successMessage = `✅ Order created successfully!\n\nOrder ID: ${result.order.id}\nPrint Shop: ${result.order.printShop}\nStatus: ${result.order.status}`;
-        
-        // You could show this in the UI instead of alert
-        console.log('Success:', successMessage);
-        
-        // Optionally update the status display
-        // setError('Order created successfully! ✅');
-      } else {
-        throw new Error(result.error || 'Order creation failed');
-      }
-
-    } catch (error) {
-      console.error('Error creating DIY Label order:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      setError(`Failed to create order: ${errorMessage}`);
-      
-      // Show user-friendly error
-      console.error('User-facing error:', errorMessage);
-    } finally {
-      setOrderCreating(false);
-    }
-  };
-
-  // Test function to verify API connectivity
-  const testAPIConnectivity = async () => {
-    try {
-      console.log('Testing API connectivity...');
-      const response = await fetch('https://diylabel.netlify.app/.netlify/functions/nearby-shops?lat=43.6532&lng=-79.3832&radius=25');
-      const data = await response.json();
-      console.log('API test successful:', data);
-      return true;
-    } catch (error) {
-      console.error('API test failed:', error);
-      return false;
-    }
-  };
-
-  // Test API connectivity on component mount
-  useEffect(() => {
-    testAPIConnectivity();
-  }, []);
 
   // Prepare select options
   const selectOptions = [
@@ -540,29 +399,6 @@ function Extension() {
       label: `${shop.name}${shop.distance_km ? ` (${shop.distance_km.toFixed(1)}km)` : ''}`
     }))
   ];
-
-  // If already enabled, show current selection
-  if (diyLabelEnabled && existingPrintShop) {
-    return (
-      <BlockStack spacing="base">
-        <Banner status="success">
-          <BlockStack spacing="tight">
-            <Text emphasis="bold">🌱 {translate("localPrintingSelected")}</Text>
-            <Text>
-              {translate("orderWillBePrinted", { printShop: existingPrintShop })}
-            </Text>
-          </BlockStack>
-        </Banner>
-        
-        <Button
-          kind="secondary"
-          onPress={handleRemoveDIYLabel}
-        >
-          {translate("removeLocalPrinting")}
-        </Button>
-      </BlockStack>
-    );
-  }
 
   // Only render if shipping address has been entered
   if (!shippingAddress) {
@@ -594,90 +430,54 @@ function Extension() {
     );
   }
 
-  // 3. Render the UI
-  return (
-    <BlockStack spacing="base">
-      <Banner status="info">
-        <BlockStack spacing="tight">
-          <Text emphasis="bold">🌱 {translate("localPrintingAvailable")}</Text>
-          <Text>
-            {translate("supportLocalCommunity")}
-          </Text>
-        </BlockStack>
-      </Banner>
-
-      {geocoding && (
-        <Banner status="info">
-          <Text>📍 {translate("usingCheckoutAddress")}</Text>
+  // If already enabled and order created, show success state
+  if (diyLabelEnabled && existingPrintShopName && (orderCreated || selectedPrintShop)) {
+    return (
+      <BlockStack spacing="base">
+        <Banner status="success">
+          <BlockStack spacing="tight">
+            <Text emphasis="bold">🌱 Local Printing Selected</Text>
+            <Text>
+              Your order will be printed at {existingPrintShopName} and ready for pickup. 
+              This reduces shipping impact and supports your local community.
+            </Text>
+          </BlockStack>
         </Banner>
-      )}
-
-      {error && (
-        <Banner status="critical">
-          <Text>{error}</Text>
-        </Banner>
-      )}
-
-      {loading && !geocoding && (
-        <Text>{translate("loadingPrintShops")}</Text>
-      )}
-
-      {!loading && !geocoding && !error && printShops.length === 0 && shippingAddress.city && (
-        <Banner status="warning">
-          <Text>No print shops found near {shippingAddress.city}, {shippingAddress.provinceCode}. Please try a different address.</Text>
-        </Banner>
-      )}
-
-      {!loading && !geocoding && !error && printShops.length > 0 && (
-        <BlockStack spacing="base">
-          <Text emphasis="bold">{translate("selectPrintShop")}</Text>
-          
-          <Select
-            label="Print Shop"
-            value={selectedPrintShop}
-            onChange={handlePrintShopChange}
-            options={selectOptions}
-          />
-
-          {selectedPrintShop && (
+        
+        {existingPrintShopAddress && (
+          <Banner status="info">
             <BlockStack spacing="tight">
+              <Text emphasis="bold">{existingPrintShopName}</Text>
+              <Text>{existingPrintShopAddress}</Text>
               {(() => {
-                const shop = printShops.find(s => s.id.toString() === selectedPrintShop);
-                if (!shop) return null;
-                
-                return (
-                  <>
-                    <Banner status="success">
-                      <BlockStack spacing="tight">
-                        <Text emphasis="bold">{shop.name} ⭐ {shop.rating}/5</Text>
-                        <Text>{shop.address}</Text>
-                        <Text>{shop.specialty}</Text>
-                        {shop.distance_km && (
-                          <Text>Distance: {shop.distance_km.toFixed(1)} km</Text>
-                        )}
-                        {shop.phone && (
-                          <Text>Phone: {shop.phone}</Text>
-                        )}
-                        {shop.email && (
-                          <Text>Email: {shop.email}</Text>
-                        )}
-                      </BlockStack>
-                    </Banner>
-
-                    <Button
-                      kind="primary"
-                      onPress={createDIYLabelOrder}
-                      loading={orderCreating}
-                    >
-                      {orderCreating ? 'Processing...' : 'Confirm Local Printing'}
-                    </Button>
-                  </>
-                );
+                const shop = printShops.find(s => s.name === existingPrintShopName);
+                if (shop) {
+                  return (
+                    <>
+                      <Text>Specialty: {shop.specialty}</Text>
+                      <Text>Rating: ⭐ {shop.rating}/5</Text>
+                      {shop.distance_km && (
+                        <Text>Distance: {shop.distance_km.toFixed(1)} km</Text>
+                      )}
+                    </>
+                  );
+                }
+                return null;
               })()}
             </BlockStack>
-          )}
-        </BlockStack>
-      )}
-    </BlockStack>
-  );
+          </Banner>
+        )}
+        
+        <Button
+          kind="secondary"
+          onPress={handleRemoveDIYLabel}
+        >
+          Remove Local Printing
+        </Button>
+      </BlockStack>
+    );
+  }
+
+  // 3. Render the UI - this should not show since local-delivery.tsx and local-pick-up.tsx handle the main UI
+  return null;
 }
