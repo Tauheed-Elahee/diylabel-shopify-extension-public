@@ -79,8 +79,17 @@ function Extension() {
   }, [diyLabelEnabled, existingPrintShop, hasCartItems, printShops.length, selectedPrintShop, loading, error]);
 
   // Create a stable address string for comparison
-  const addressString = shippingAddress ? 
-    `${shippingAddress.address1 || ''}, ${shippingAddress.city || ''}, ${shippingAddress.provinceCode || ''}, ${shippingAddress.countryCode || ''}, ${shippingAddress.zip || ''}`.trim() : '';
+  const addressString = useMemo(() => {
+    if (!shippingAddress) return '';
+    
+    return [
+      shippingAddress.address1,
+      shippingAddress.city,
+      shippingAddress.provinceCode,
+      shippingAddress.countryCode,
+      shippingAddress.zip
+    ].filter(Boolean).join(', ');
+  }, [shippingAddress]);
 
   // 2. Check instructions for feature availability
   if (!instructions.attributes.canUpdateAttributes) {
@@ -186,11 +195,14 @@ function Extension() {
       console.log('🌱 DIY Label Extension: loadPrintShopsForAddress called', {
         hasShippingAddress: !!shippingAddress,
         hasCity: !!shippingAddress?.city,
+        hasAddress1: !!shippingAddress?.address1,
         diyLabelEnabled,
-        addressString
+        addressString,
+        shippingAddressDetails: shippingAddress
       });
 
-      if (!shippingAddress || !shippingAddress.city) {
+      // More flexible validation - require either city OR address1
+      if (!shippingAddress || (!shippingAddress.city && !shippingAddress.address1)) {
         // Clear print shops if no valid address
         console.log('🌱 DIY Label Extension: No valid address, clearing print shops');
         setPrintShops([]);
@@ -200,42 +212,46 @@ function Extension() {
 
       console.log('Address changed, fetching print shops for:', addressString);
 
-      // Try to geocode the address
-      const coordinates = await geocodeAddress(shippingAddress);
+      // Use smart location detection instead of geocoding
+      let coordinates = null;
+      
+      // Smart location detection based on province and city
+      if (shippingAddress.provinceCode === 'QC' || shippingAddress.province === 'Quebec') {
+        if (shippingAddress.city?.toLowerCase().includes('montreal') || 
+            shippingAddress.city?.toLowerCase().includes('ville-marie')) {
+          coordinates = { lat: 45.5017, lng: -73.5673 }; // Montreal
+          console.log('🌱 Detected Montreal from address');
+        } else if (shippingAddress.city?.toLowerCase().includes('quebec')) {
+          coordinates = { lat: 46.8139, lng: -71.208 }; // Quebec City
+          console.log('🌱 Detected Quebec City from address');
+        } else {
+          coordinates = { lat: 45.5017, lng: -73.5673 }; // Default to Montreal for QC
+          console.log('🌱 Using Montreal default for Quebec');
+        }
+      } else if (shippingAddress.provinceCode === 'ON' || shippingAddress.province === 'Ontario') {
+        if (shippingAddress.city?.toLowerCase().includes('toronto')) {
+          coordinates = { lat: 43.6532, lng: -79.3832 }; // Toronto
+          console.log('🌱 Detected Toronto from address');
+        } else if (shippingAddress.city?.toLowerCase().includes('ottawa')) {
+          coordinates = { lat: 45.4215, lng: -75.6972 }; // Ottawa
+          console.log('🌱 Detected Ottawa from address');
+        } else {
+          coordinates = { lat: 43.6532, lng: -79.3832 }; // Default to Toronto for ON
+          console.log('🌱 Using Toronto default for Ontario');
+        }
+      } else if (shippingAddress.provinceCode === 'BC') {
+        coordinates = { lat: 49.2827, lng: -123.1207 }; // Vancouver
+        console.log('🌱 Using Vancouver for BC');
+      } else if (shippingAddress.provinceCode === 'AB') {
+        coordinates = { lat: 51.0447, lng: -114.0719 }; // Calgary
+        console.log('🌱 Using Calgary for AB');
+      } else {
+        coordinates = { lat: 45.4215, lng: -75.6972 }; // Default Ottawa
+        console.log('🌱 Using Ottawa as default');
+      }
       
       if (coordinates) {
-        console.log('🌱 DIY Label Extension: Got coordinates, fetching print shops');
         await fetchPrintShops(coordinates.lat, coordinates.lng);
-      } else {
-        // Fallback to a default location if geocoding fails
-        console.log('🌱 Geocoding failed, trying to determine location from address');
-        
-        // Try to determine location from province/city
-        let fallbackLat = 45.4215; // Default Ottawa
-        let fallbackLng = -75.6972;
-        
-        if (shippingAddress.provinceCode === 'QC' || shippingAddress.province === 'Quebec') {
-          if (shippingAddress.city?.toLowerCase().includes('montreal') || 
-              shippingAddress.city?.toLowerCase().includes('ville-marie')) {
-            fallbackLat = 45.5017; // Montreal coordinates
-            fallbackLng = -73.5673;
-            console.log('🌱 Using Montreal fallback coordinates');
-          } else if (shippingAddress.city?.toLowerCase().includes('quebec')) {
-            fallbackLat = 46.8139; // Quebec City coordinates
-            fallbackLng = -71.208;
-            console.log('🌱 Using Quebec City fallback coordinates');
-          }
-        } else if (shippingAddress.provinceCode === 'BC') {
-          fallbackLat = 49.2827; // Vancouver coordinates
-          fallbackLng = -123.1207;
-          console.log('🌱 Using Vancouver fallback coordinates');
-        } else if (shippingAddress.provinceCode === 'AB') {
-          fallbackLat = 51.0447; // Calgary coordinates
-          fallbackLng = -114.0719;
-          console.log('🌱 Using Calgary fallback coordinates');
-        }
-        
-        await fetchPrintShops(fallbackLat, fallbackLng);
       }
     };
 
@@ -246,7 +262,7 @@ function Extension() {
     } else {
       console.log('🌱 DIY Label Extension: DIY Label already enabled, skipping print shop loading');
     }
-  }, [addressString, diyLabelEnabled]); // Re-run when address string changes
+  }, [addressString, diyLabelEnabled, shippingAddress?.provinceCode, shippingAddress?.city]);
 
   // Handle print shop selection
   const handlePrintShopChange = async (value: string) => {
