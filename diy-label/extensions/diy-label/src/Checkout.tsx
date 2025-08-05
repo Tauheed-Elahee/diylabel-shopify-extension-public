@@ -208,8 +208,34 @@ function Extension() {
         await fetchPrintShops(coordinates.lat, coordinates.lng);
       } else {
         // Fallback to a default location if geocoding fails
-        console.log('Geocoding failed, using default Ottawa location');
-        await fetchPrintShops(45.4215, -75.6972); // Ottawa coordinates
+        console.log('🌱 Geocoding failed, trying to determine location from address');
+        
+        // Try to determine location from province/city
+        let fallbackLat = 45.4215; // Default Ottawa
+        let fallbackLng = -75.6972;
+        
+        if (shippingAddress.provinceCode === 'QC' || shippingAddress.province === 'Quebec') {
+          if (shippingAddress.city?.toLowerCase().includes('montreal') || 
+              shippingAddress.city?.toLowerCase().includes('ville-marie')) {
+            fallbackLat = 45.5017; // Montreal coordinates
+            fallbackLng = -73.5673;
+            console.log('🌱 Using Montreal fallback coordinates');
+          } else if (shippingAddress.city?.toLowerCase().includes('quebec')) {
+            fallbackLat = 46.8139; // Quebec City coordinates
+            fallbackLng = -71.208;
+            console.log('🌱 Using Quebec City fallback coordinates');
+          }
+        } else if (shippingAddress.provinceCode === 'BC') {
+          fallbackLat = 49.2827; // Vancouver coordinates
+          fallbackLng = -123.1207;
+          console.log('🌱 Using Vancouver fallback coordinates');
+        } else if (shippingAddress.provinceCode === 'AB') {
+          fallbackLat = 51.0447; // Calgary coordinates
+          fallbackLng = -114.0719;
+          console.log('🌱 Using Calgary fallback coordinates');
+        }
+        
+        await fetchPrintShops(fallbackLat, fallbackLng);
       }
     };
 
