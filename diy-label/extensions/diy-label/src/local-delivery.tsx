@@ -463,7 +463,14 @@ function Extension() {
   ];
 
   // Only render if shipping address has been entered
-  if (!shippingAddress || !shippingAddress.address1) {
+  if (!shippingAddress) {
+    console.log('🚢 No shipping address available yet');
+    return null;
+  }
+  
+  // More flexible address validation - only require city OR address1
+  if (!shippingAddress.address1 && !shippingAddress.city) {
+    console.log('🚢 No address1 or city available');
     return null;
   }
 
@@ -497,9 +504,9 @@ function Extension() {
           <Text>Loading print shops...</Text>
         )}
 
-        {!loading && !geocoding && !error && printShops.length === 0 && shippingAddress.city && (
+        {!loading && !geocoding && !error && printShops.length === 0 && (shippingAddress.city || shippingAddress.address1) && (
           <Banner status="warning">
-            <Text>No print shops found near {shippingAddress.city}, {shippingAddress.provinceCode}. Please try a different address.</Text>
+            <Text>No print shops found near {shippingAddress.city || shippingAddress.address1}, {shippingAddress.provinceCode}. Please try a different address.</Text>
           </Banner>
         )}
 

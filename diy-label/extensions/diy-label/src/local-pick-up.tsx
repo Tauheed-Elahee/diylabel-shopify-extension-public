@@ -462,7 +462,14 @@ function Extension() {
   ];
 
   // Only render if shipping address has been entered
-  if (!shippingAddress || !shippingAddress.address1) {
+  if (!shippingAddress) {
+    console.log('📦 No shipping address available yet');
+    return null;
+  }
+  
+  // More flexible address validation - city might be missing initially
+  if (!shippingAddress.address1 && !shippingAddress.city) {
+    console.log('📦 No address1 or city available yet');
     return null;
   }
 

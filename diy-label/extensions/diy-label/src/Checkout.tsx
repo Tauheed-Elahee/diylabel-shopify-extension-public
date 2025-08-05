@@ -506,13 +506,29 @@ function Extension() {
   }
 
   // Only render if shipping address has been entered
-  if (!shippingAddress || !shippingAddress.address1) {
+  if (!shippingAddress) {
+    console.log('🌱 No shipping address available yet');
     return (
       <Banner status="info">
         <BlockStack spacing="tight">
           <Text emphasis="bold">🌱 {translate("localPrintingAvailable")}</Text>
           <Text>
-            {translate("enterShippingAddress")}
+            Please enter your shipping address to find nearby print shops.
+          </Text>
+        </BlockStack>
+      </Banner>
+    );
+  }
+  
+  // More flexible address validation
+  if (!shippingAddress.address1 && !shippingAddress.city) {
+    console.log('🌱 No address1 or city available yet');
+    return (
+      <Banner status="info">
+        <BlockStack spacing="tight">
+          <Text emphasis="bold">🌱 {translate("localPrintingAvailable")}</Text>
+          <Text>
+            Please complete your shipping address to find nearby print shops.
           </Text>
         </BlockStack>
       </Banner>
