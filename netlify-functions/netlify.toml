@@ -34,8 +34,3 @@
   from = "/api/orders"
   to = "/.netlify/functions/get-orders"
   status = 200
-
-[[redirects]]
-  from = "/api/geocode"
-  to = "/.netlify/functions/geocode"
-  status = 200
