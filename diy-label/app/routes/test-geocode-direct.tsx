@@ -209,7 +209,7 @@ export default function TestGeocodeDirect() {
           <h4>Solutions:</h4>
           <ol>
             <li><strong>Check Netlify Environment:</strong> Go to Netlify dashboard → Site settings → Environment variables</li>
-            <li><strong>Verify Mapbox Token:</strong> Test token at <a href="https://account.mapbox.com" target=\"_blank">Mapbox Account</a></li>
+            <li><strong>Verify Mapbox Token:</strong> Test token at <a href="https://account.mapbox.com" target="_blank">Mapbox Account</a></li>
             <li><strong>Check Function Logs:</strong> Go to Netlify dashboard → Functions → View logs</li>
             <li><strong>Test Locally:</strong> Run netlify dev to test functions locally</li>
           </ol>
