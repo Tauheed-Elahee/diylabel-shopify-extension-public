@@ -22,17 +22,17 @@ export default function TestGeocodeDirect() {
   const testGeocoding = async (endpoint: string) => {
     try {
       console.log(`Testing geocoding with endpoint: ${endpoint}`);
-      
+
       const url = `${endpoint}?address=${encodeURIComponent(testAddress)}`;
       console.log('Full URL:', url);
-      
+
       const response = await fetch(url);
       console.log('Response status:', response.status);
       console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-      
+
       const data = await response.json();
       console.log('Response data:', data);
-      
+
       if (response.ok && data.lat && data.lng) {
         alert(`✅ Geocoding successful with ${endpoint}!\n\nAddress: ${testAddress}\nCoordinates: ${data.lat}, ${data.lng}\nMapbox result: ${data.address || 'N/A'}`);
       } else {
@@ -48,9 +48,9 @@ export default function TestGeocodeDirect() {
     try {
       // Test Mapbox API directly (this will fail due to CORS, but we can see the error)
       const mapboxUrl = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(testAddress)}.json?access_token=YOUR_TOKEN&limit=1&country=CA`;
-      
+
       alert(`🔍 Testing Mapbox API directly:\n\nURL: ${mapboxUrl.replace('YOUR_TOKEN', 'TOKEN_HIDDEN')}\n\nThis will likely fail due to CORS, but check the browser console for details.`);
-      
+
       const response = await fetch(mapboxUrl.replace('YOUR_TOKEN', 'pk.test'));
       console.log('Direct Mapbox test:', response);
     } catch (error) {
@@ -62,13 +62,13 @@ export default function TestGeocodeDirect() {
   return (
     <div style={{ padding: '20px', fontFamily: 'system-ui', maxWidth: '800px' }}>
       <h1>🧪 Test Geocoding Function</h1>
-      
+
       <div style={{ marginBottom: '20px' }}>
-        <a href="/debug-index" style={{ 
-          padding: '8px 16px', 
-          backgroundColor: '#007cba', 
-          color: 'white', 
-          textDecoration: 'none', 
+        <a href="/debug-index" style={{
+          padding: '8px 16px',
+          backgroundColor: '#007cba',
+          color: 'white',
+          textDecoration: 'none',
           borderRadius: '4px',
           fontSize: '14px',
           fontWeight: '600'
@@ -77,8 +77,8 @@ export default function TestGeocodeDirect() {
         </a>
       </div>
 
-      <div style={{ 
-        padding: '20px', 
+      <div style={{
+        padding: '20px',
         backgroundColor: '#e3f2fd',
         border: '1px solid #2196f3',
         borderRadius: '8px',
@@ -91,11 +91,11 @@ export default function TestGeocodeDirect() {
 
       <div style={{ marginBottom: '30px' }}>
         <h2>🧪 Test Geocoding Endpoints</h2>
-        
+
         <div style={{ display: 'grid', gap: '15px' }}>
           {endpoints.map((endpoint, index) => (
-            <div key={index} style={{ 
-              padding: '20px', 
+            <div key={index} style={{
+              padding: '20px',
               border: '1px solid #007cba',
               borderRadius: '8px'
             }}>
@@ -123,10 +123,10 @@ export default function TestGeocodeDirect() {
 
       <div style={{ marginBottom: '30px' }}>
         <h2>🔍 Direct Tests</h2>
-        
+
         <div style={{ display: 'grid', gap: '15px' }}>
-          <div style={{ 
-            padding: '20px', 
+          <div style={{
+            padding: '20px',
             border: '1px solid #28a745',
             borderRadius: '8px'
           }}>
@@ -149,8 +149,8 @@ export default function TestGeocodeDirect() {
             </button>
           </div>
 
-          <div style={{ 
-            padding: '20px', 
+          <div style={{
+            padding: '20px',
             border: '1px solid #ff9800',
             borderRadius: '8px'
           }}>
@@ -190,9 +190,9 @@ export default function TestGeocodeDirect() {
 
       <div style={{ marginBottom: '30px' }}>
         <h2>🔧 Common Issues & Solutions</h2>
-        
-        <div style={{ 
-          padding: '20px', 
+
+        <div style={{
+          padding: '20px',
           backgroundColor: '#fff3cd',
           border: '1px solid #ffeaa7',
           borderRadius: '8px'
@@ -205,11 +205,11 @@ export default function TestGeocodeDirect() {
             <li><strong>Network Issues:</strong> Netlify can't reach Mapbox API</li>
             <li><strong>Function Error:</strong> JavaScript error in the function code</li>
           </ol>
-          
+
           <h4>Solutions:</h4>
           <ol>
             <li><strong>Check Netlify Environment:</strong> Go to Netlify dashboard → Site settings → Environment variables</li>
-            <li><strong>Verify Mapbox Token:</strong> Test token at <a href="https://account.mapbox.com" target=\"_blank">Mapbox Account</a></li>
+            <li><strong>Verify Mapbox Token:</strong> Test token at <a href="https://account.mapbox.com" target="_blank">Mapbox Account</a></li>
             <li><strong>Check Function Logs:</strong> Go to Netlify dashboard → Functions → View logs</li>
             <li><strong>Test Locally:</strong> Run netlify dev to test functions locally</li>
           </ol>
@@ -218,9 +218,9 @@ export default function TestGeocodeDirect() {
 
       <div style={{ marginBottom: '30px' }}>
         <h2>📋 Manual Test URLs</h2>
-        
-        <div style={{ 
-          padding: '15px', 
+
+        <div style={{
+          padding: '15px',
           backgroundColor: '#f5f5f5',
           border: '1px solid #ddd',
           borderRadius: '4px'
@@ -228,7 +228,7 @@ export default function TestGeocodeDirect() {
           <h4>Test these URLs directly in your browser:</h4>
           <ul>
             <li>
-              <a 
+              <a
                 href={`https://diylabel.netlify.app/.netlify/functions/geocode?address=${encodeURIComponent(testAddress)}`}
                 target="_blank"
                 style={{ color: '#007cba' }}
@@ -237,7 +237,7 @@ export default function TestGeocodeDirect() {
               </a>
             </li>
             <li>
-              <a 
+              <a
                 href={`/api/geocode?address=${encodeURIComponent(testAddress)}`}
                 target="_blank"
                 style={{ color: '#007cba' }}
@@ -259,9 +259,9 @@ export default function TestGeocodeDirect() {
         </ul>
       </div>
 
-      <div style={{ 
+      <div style={{
         marginTop: '30px',
-        padding: '15px', 
+        padding: '15px',
         backgroundColor: '#fee8e8',
         border: '1px solid #f44336',
         borderRadius: '4px'
